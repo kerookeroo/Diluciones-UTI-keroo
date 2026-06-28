@@ -1610,9 +1610,9 @@ export default function App() {
         }
         .content-scale-wrap {
           flex: 1;
-          width: 92.6%;
+          width: 88.5%;
           margin: 0 auto;
-          transform: scale(1.08);
+          transform: scale(1.13);
           transform-origin: top center;
         }
         .content {
