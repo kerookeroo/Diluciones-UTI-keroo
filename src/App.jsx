@@ -306,7 +306,7 @@ function resaltarDosis(texto) {
   return partes;
 }
 
-function Field({ label, unit, value, onChange, placeholder }) {
+function Field({ label, unit, value, onChange, placeholder, onBlur }) {
   return (
     <label className="field">
       <span className="field-label">{label}</span>
@@ -317,6 +317,7 @@ function Field({ label, unit, value, onChange, placeholder }) {
           inputMode="decimal"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
           placeholder={placeholder}
         />
         {unit && <span className="field-unit">{unit}</span>}
@@ -468,6 +469,7 @@ function Diluciones() {
   const [dropdownDrogaAbierto, setDropdownDrogaAbierto] = useState(false);
   const dropdownDrogaRef = useRef(null);
   const dropdownScrollRef = useRef(null);
+  const resultadoRef = useRef(null);
 
   useEffect(() => {
     if (dropdownDrogaAbierto && dropdownScrollRef.current) {
@@ -477,6 +479,20 @@ function Diluciones() {
       }
     }
   }, [dropdownDrogaAbierto]);
+
+  // Al cerrar el teclado (blur del campo de peso), Safari/iOS no reajusta
+  // el scroll automáticamente: la página queda en la posición que tenía
+  // con el teclado abierto, dejando el resultado fuera de vista arriba.
+  // Forzamos un scroll suave hacia el bloque de resultado, con un pequeño
+  // delay para esperar a que el teclado termine de cerrarse y el viewport
+  // real se redimensione antes de calcular la posición.
+  const handleBlurPeso = () => {
+    setTimeout(() => {
+      if (resultadoRef.current) {
+        resultadoRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 300);
+  };
 
   useEffect(() => {
     if (!dropdownDrogaAbierto) return;
@@ -1005,11 +1021,11 @@ function Diluciones() {
 
           {necesitaPeso && (
             <div className="panel-row">
-              <Field label="Peso del paciente" unit="kg" value={pesoKg} onChange={setPesoKg} placeholder="ej: 70" />
+              <Field label="Peso del paciente" unit="kg" value={pesoKg} onChange={setPesoKg} placeholder="ej: 70" onBlur={handleBlurPeso} />
             </div>
           )}
 
-          <div className="result-block">
+          <div className="result-block" ref={resultadoRef}>
             {!resultado && (
               <div className="result-empty">
                 Completá los datos de preparación para ver la concentración.
