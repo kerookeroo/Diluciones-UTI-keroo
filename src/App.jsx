@@ -1586,7 +1586,7 @@ export default function App() {
           padding: 18px;
         }
         .panel-row {
-          margin-bottom: 12px;
+          margin-bottom: 16px;
         }
         .panel-row.two-col {
           display: grid;
@@ -1686,8 +1686,8 @@ export default function App() {
           letter-spacing: 0.1em;
           color: var(--accent-green-deep);
           font-weight: 700;
-          margin: 4px 0 8px;
-          padding-top: 4px;
+          margin: 12px 0 10px;
+          padding-top: 10px;
           border-top: 1px solid var(--border-panel);
         }
         .panel-row:first-child + .section-title,
@@ -1917,7 +1917,7 @@ export default function App() {
           align-items: flex-start;
           justify-content: space-between;
           gap: 10px;
-          margin-bottom: 6px;
+          margin-bottom: 14px;
         }
         .panel-row.first-row { display: flex; align-items: flex-end; gap: 10px; }
         .result-block {
