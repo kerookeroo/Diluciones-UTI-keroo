@@ -358,7 +358,7 @@ function Inicio({ tema, toggleTheme, setTab }) {
         <div className="inicio-seccion-titulo">INTERFAZ Y CONFIGURACIÓN</div>
         <div className="inicio-row inicio-row-switch">
           <span className="inicio-row-icon">{esOscuro ? "🌙" : "☀️"}</span>
-          <span className="inicio-row-label">Modo {esOscuro ? "oscuro" : "claro"} UTI</span>
+          <span className="inicio-row-label">Activar modo noche</span>
           <button
             type="button"
             onClick={toggleTheme}
@@ -1328,9 +1328,9 @@ export default function App() {
   const [scrolled, setScrolled] = useState(false);
   const [tema, setTema] = useState(() => {
     try {
-      return localStorage.getItem("diluciones-uti-tema") || "dark";
+      return localStorage.getItem("diluciones-uti-tema") || "light";
     } catch {
-      return "dark";
+      return "light";
     }
   });
 
@@ -1509,8 +1509,8 @@ export default function App() {
           --value-muted: #3C4F47;
           --accent-select: #1F9E63;
         }
-        html {
-          zoom: 1.18;
+        html, body {
+          overscroll-behavior-y: none;
         }
         .app-shell {
           min-height: 100vh;
