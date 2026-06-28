@@ -1608,8 +1608,14 @@ export default function App() {
         .topbar.topbar-collapsed + .topbar-spacer {
           height: 36px;
         }
-        .content {
+        .content-scale-wrap {
           flex: 1;
+          width: 92.6%;
+          margin: 0 auto;
+          transform: scale(1.08);
+          transform-origin: top center;
+        }
+        .content {
           padding: 18px 16px;
           max-width: 480px;
           margin: 0 auto;
@@ -2392,8 +2398,10 @@ export default function App() {
 
       <div className="topbar-spacer" />
 
-      <div className={`content ${tab === "inicio" ? "content-centrado" : ""}`}>
-        {tab === "goteo" ? <Goteo /> : tab === "pafi" ? <PaFi /> : tab === "inicio" ? <Inicio tema={tema} toggleTheme={toggleTheme} setTab={setTab} /> : <Diluciones />}
+      <div className={`content-scale-wrap`}>
+        <div className={`content ${tab === "inicio" ? "content-centrado" : ""}`}>
+          {tab === "goteo" ? <Goteo /> : tab === "pafi" ? <PaFi /> : tab === "inicio" ? <Inicio tema={tema} toggleTheme={toggleTheme} setTab={setTab} /> : <Diluciones />}
+        </div>
       </div>
 
       <div className="tabbar">
