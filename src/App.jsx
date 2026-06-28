@@ -483,15 +483,18 @@ function Diluciones() {
   // Al cerrar el teclado (blur del campo de peso), Safari/iOS no reajusta
   // el scroll automáticamente: la página queda en la posición que tenía
   // con el teclado abierto, dejando el resultado fuera de vista arriba.
-  // Forzamos un scroll suave hacia el bloque de resultado, con un pequeño
-  // delay para esperar a que el teclado termine de cerrarse y el viewport
-  // real se redimensione antes de calcular la posición.
+  // Usamos un delay más largo (450ms) para esperar a que la animación de
+  // cierre del teclado termine y el viewport real se redimensione, y
+  // calculamos la posición manualmente en vez de depender de scrollIntoView,
+  // que puede medir mal mientras el layout todavía está en transición.
   const handleBlurPeso = () => {
     setTimeout(() => {
       if (resultadoRef.current) {
-        resultadoRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        const rect = resultadoRef.current.getBoundingClientRect();
+        const offsetDestino = window.scrollY + rect.top - 90;
+        window.scrollTo({ top: offsetDestino, behavior: "smooth" });
       }
-    }, 300);
+    }, 450);
   };
 
   useEffect(() => {
