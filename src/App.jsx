@@ -1118,17 +1118,23 @@ function Goteo() {
 export default function App() {
   const [tab, setTab] = useState("diluciones");
   const [scrolled, setScrolled] = useState(false);
-  const sentinelRef = useRef(null);
 
   useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setScrolled(!entry.isIntersecting),
-      { threshold: 0, rootMargin: "0px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
+    const getScrollY = () =>
+      window.scrollY ||
+      document.documentElement.scrollTop ||
+      document.body.scrollTop ||
+      0;
+
+    const onScroll = () => setScrolled(getScrollY() > 16);
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   return (
@@ -1813,7 +1819,6 @@ export default function App() {
         .tab-btn.active { color: #4FD195; }
       `}</style>
 
-      <div ref={sentinelRef} style={{ height: 0 }} />
       <div className={`topbar ${scrolled ? "topbar-collapsed" : ""}`}>
         <div className="topbar-inner">
           <div className="topbar-eyebrow-row">
