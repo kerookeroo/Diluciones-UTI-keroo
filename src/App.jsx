@@ -1141,6 +1141,12 @@ export default function App() {
     <div className="app-shell">
       <style>{`
         * { box-sizing: border-box; }
+        html, body {
+          overscroll-behavior-y: none;
+        }
+        html {
+          zoom: 1.18;
+        }
         .app-shell {
           min-height: 100vh;
           background: #0B1210;
@@ -1149,7 +1155,6 @@ export default function App() {
           display: flex;
           flex-direction: column;
           padding-bottom: 90px;
-          zoom: 1.18;
         }
         .topbar {
           padding: 28px 20px 18px;
