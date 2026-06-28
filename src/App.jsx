@@ -1509,9 +1509,6 @@ export default function App() {
           --value-muted: #3C4F47;
           --accent-select: #1F9E63;
         }
-        html, body {
-          overscroll-behavior-y: none;
-        }
         html {
           zoom: 1.18;
         }
