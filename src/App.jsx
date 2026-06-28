@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw } from "lucide-react";
+import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home } from "lucide-react";
 
 const DROGAS = [
   "Adrenalina",
@@ -45,6 +45,9 @@ const DOSIS_REFERENCIA = {
     unidadRef: "mcg/kg/min",
     umbralAlerta: 3,
     texto: "Sin máximo absoluto fijo. Ficha técnica: 0,5–1 mcg/kg/min en shock séptico. En shock refractario se han usado dosis mayores (hasta 3 mcg/kg/min) bajo monitorización estrecha.",
+    escenarios: [
+      { titulo: "Infusión continua", items: ["Habitual: 0,5–1 mcg/kg/min (shock séptico)", "Excepcional: hasta 3 mcg/kg/min en shock refractario, bajo monitorización estrecha"] },
+    ],
   },
   "Adrenalina": {
     techo: false,
@@ -55,6 +58,11 @@ const DOSIS_REFERENCIA = {
     unidadRef: "mcg/kg/min",
     umbralAlerta: 5,
     texto: "En PCR: 1 mg IV en bolo cada 3-5 min. En shock anafiláctico: 0,5 mg IM, repetible hasta 3 dosis. En infusión continua (shock/soporte hemodinámico): 0,1-1 mcg/kg/min, con dosis de hasta 5 mcg/kg/min en casos refractarios bajo monitorización estrecha.",
+    escenarios: [
+      { titulo: "PCR", items: ["1 mg IV", "cada 3–5 min"] },
+      { titulo: "Shock anafiláctico", items: ["0,5 mg IM", "hasta 3 dosis"] },
+      { titulo: "Infusión continua", items: ["Habitual: 0,1–1 mcg/kg/min", "Excepcional: hasta 5 mcg/kg/min, bajo monitorización estrecha"] },
+    ],
   },
   "Dopamina": {
     techo: true,
@@ -65,6 +73,9 @@ const DOSIS_REFERENCIA = {
     unidadRef: "mcg/kg/min",
     techoValor: 50,
     texto: "Dosis máxima recomendada: 20 mcg/kg/min. En situaciones graves se han administrado hasta 50 mcg/kg/min, vigilando diuresis de cerca.",
+    escenarios: [
+      { titulo: "Infusión continua", items: ["Máximo recomendado: 20 mcg/kg/min", "Excepcional: hasta 50 mcg/kg/min en situaciones graves, vigilando diuresis de cerca"] },
+    ],
   },
   "Dobutamina": {
     techo: true,
@@ -75,6 +86,10 @@ const DOSIS_REFERENCIA = {
     unidadRef: "mcg/kg/min",
     techoValor: 20,
     texto: "Dosis máxima habitual: 20 mcg/kg/min en soporte hemodinámico. En protocolos de ecocardiografía de estrés se llega a 40-50 mcg/kg/min, pero es otro uso.",
+    escenarios: [
+      { titulo: "Soporte hemodinámico", items: ["Máximo habitual: 20 mcg/kg/min"] },
+      { titulo: "Ecocardiografía de estrés (otro uso)", items: ["40–50 mcg/kg/min, protocolo específico"] },
+    ],
   },
   "Nitroglicerina": {
     techo: true,
@@ -85,6 +100,9 @@ const DOSIS_REFERENCIA = {
     unidadRef: "mcg/min",
     techoValor: 400,
     texto: "Dosis usual: 10–200 mcg/min. En algunos contextos quirúrgicos se han usado 400 mcg/min o más, siempre bajo monitorización de PA.",
+    escenarios: [
+      { titulo: "Infusión continua", items: ["Habitual: 10–200 mcg/min", "Excepcional: hasta 400 mcg/min o más en contexto quirúrgico, bajo monitorización de PA"] },
+    ],
   },
   "Nitroprusiato": {
     techo: false,
@@ -95,6 +113,11 @@ const DOSIS_REFERENCIA = {
     unidadRef: "mcg/kg/min",
     umbralAlerta: 10,
     texto: "Dosis usual: 0,3–3 mcg/kg/min, titulando según respuesta de PA. Umbral de alerta: 10 mcg/kg/min — dosis máxima admitida solo por períodos muy breves (no más de 10 min), por riesgo de toxicidad por cianuro/tiocianato. Uso prolongado (>72h) o a dosis altas requiere monitorización de niveles de tiocianato, especialmente en insuficiencia renal/hepática. Proteger de la luz durante la infusión.",
+    escenarios: [
+      { titulo: "Infusión continua", items: ["Habitual: 0,3–3 mcg/kg/min, titulando según PA", "Umbral de alerta: 10 mcg/kg/min, solo por períodos muy breves (no más de 10 min)"] },
+      { titulo: "Riesgo de toxicidad", items: ["Por cianuro/tiocianato si se sostiene dosis alta", "Uso prolongado (>72h) requiere monitorización de tiocianato, sobre todo en insuficiencia renal/hepática"] },
+      { titulo: "Cuidado en la administración", items: ["Proteger de la luz durante toda la infusión"] },
+    ],
   },
   "Midazolam": {
     techo: false,
@@ -302,6 +325,144 @@ function Field({ label, unit, value, onChange, placeholder }) {
   );
 }
 
+function Inicio({ tema, toggleTheme, setTab }) {
+  const esOscuro = tema === "dark";
+  return (
+    <div className="panel inicio-panel">
+      <div className="inicio-saludo">
+        <div className="inicio-saludo-titulo">¡Hola, colega! 👋</div>
+        <div className="inicio-saludo-sub">¿Qué herramientas necesitás hoy?</div>
+      </div>
+
+      <div className="inicio-seccion">
+        <div className="inicio-seccion-titulo">ACCESOS DIRECTOS</div>
+        <button type="button" className="inicio-row" onClick={() => setTab("diluciones")}>
+          <span className="inicio-row-icon">💉</span>
+          <span className="inicio-row-label">Diluciones Medicamentosas</span>
+          <ChevronDown size={16} className="inicio-row-chevron" />
+        </button>
+        <button type="button" className="inicio-row" onClick={() => setTab("goteo")}>
+          <span className="inicio-row-icon">💧</span>
+          <span className="inicio-row-label">Cálculo de Goteo / Tiempo</span>
+          <ChevronDown size={16} className="inicio-row-chevron" />
+        </button>
+        <button type="button" className="inicio-row" onClick={() => setTab("pafi")}>
+          <span className="inicio-row-icon">🫁</span>
+          <span className="inicio-row-label">Relación PaFi (Berlín 2012)</span>
+          <ChevronDown size={16} className="inicio-row-chevron" />
+        </button>
+      </div>
+
+      <div className="inicio-seccion">
+        <div className="inicio-seccion-titulo">INTERFAZ Y CONFIGURACIÓN</div>
+        <div className="inicio-row inicio-row-switch">
+          <span className="inicio-row-icon">{esOscuro ? "🌙" : "☀️"}</span>
+          <span className="inicio-row-label">Modo {esOscuro ? "oscuro" : "claro"} UTI</span>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className={`theme-switch-btn ${esOscuro ? "is-dark" : "is-light"}`}
+            aria-label="Cambiar entre modo claro y oscuro"
+          >
+            <div className="theme-switch-knob" />
+          </button>
+        </div>
+      </div>
+
+      <div className="inicio-footer">
+        Calculadora Clínica v2.0<br />
+        Desarrollada por Reparaciones Keroo PC
+        <div className="inicio-footer-links">
+          <a href="https://instagram.com/keroo_reparacionespc" target="_blank" rel="noopener noreferrer" className="inicio-footer-link">
+            Instagram
+          </a>
+          <span className="inicio-footer-sep">·</span>
+          <a href="mailto:reparacioneskeroo@outlook.com" className="inicio-footer-link">
+            Correo
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PaFi() {
+  const [pao2, setPao2] = useState("");
+  const [fio2Pct, setFio2Pct] = useState("");
+
+  const resultado = useMemo(() => {
+    const pao2Val = num(pao2);
+    const fio2PctVal = num(fio2Pct);
+    if (!pao2Val || pao2Val <= 0 || !fio2PctVal || fio2PctVal <= 0) return null;
+    // FiO2 se ingresa en % (ej. 40) y se convierte a decimal (0.4) para
+    // la fórmula clásica PaFi = PaO2 / FiO2(decimal). FiO2 nunca debería
+    // superar 100% (aire ambiente = 21%, oxígeno puro = 100%).
+    const fio2Decimal = Math.min(fio2PctVal, 100) / 100;
+    const pafi = pao2Val / fio2Decimal;
+
+    let categoria, colorClass;
+    if (pafi > 300) {
+      categoria = "Sin criterio de SDRA (oxigenación normal o casi normal)";
+      colorClass = "pafi-normal";
+    } else if (pafi > 200) {
+      categoria = "SDRA leve";
+      colorClass = "pafi-leve";
+    } else if (pafi > 100) {
+      categoria = "SDRA moderado";
+      colorClass = "pafi-moderado";
+    } else {
+      categoria = "SDRA severo";
+      colorClass = "pafi-severo";
+    }
+
+    return { valor: pafi, categoria, colorClass };
+  }, [pao2, fio2Pct]);
+
+  return (
+    <div className="panel">
+      <div className="panel-row">
+        <Field label="PaO₂ (gasometría arterial)" unit="mmHg" value={pao2} onChange={setPao2} placeholder="ej: 80" />
+      </div>
+      <div className="panel-row">
+        <Field label="FiO₂" unit="%" value={fio2Pct} onChange={setFio2Pct} placeholder="ej: 40" />
+      </div>
+
+      {resultado ? (
+        <>
+          <div className="result-main">
+            <span className="result-main-value">{fmtDosis(resultado.valor, 0)}</span>
+            <span className="result-main-unit">PaO₂/FiO₂</span>
+          </div>
+          <div className={`pafi-categoria ${resultado.colorClass}`}>
+            {resultado.categoria}
+          </div>
+        </>
+      ) : (
+        <div className="result-empty">
+          Completá PaO₂ y FiO₂ para calcular la relación PaFi.
+        </div>
+      )}
+
+      <div className="ref-dosis">
+        <div className="ref-dosis-titulo">Clasificación de gravedad (Definición de Berlín, 2012)</div>
+        <div className="ref-dosis-escenarios">
+          <div className="ref-dosis-escenario">
+            <ul className="ref-dosis-escenario-lista">
+              <li>PaFi &gt; 300: sin criterio de SDRA</li>
+              <li>PaFi 201–300: <strong>SDRA leve</strong></li>
+              <li>PaFi 101–200: <strong>SDRA moderado</strong></li>
+              <li>PaFi ≤ 100: <strong>SDRA severo</strong></li>
+            </ul>
+          </div>
+        </div>
+        <div className="ref-dosis-texto" style={{ marginTop: 8 }}>
+          Esta clasificación asume ventilación con PEEP/CPAP ≥ 5 cmH₂O. Fuente: ARDS Definition Task Force, JAMA 2012 (Definición de Berlín).
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Diluciones() {
   const [droga, setDroga] = useState(DROGAS[0]);
   const [dropdownDrogaAbierto, setDropdownDrogaAbierto] = useState(false);
@@ -505,6 +666,11 @@ function Diluciones() {
 
   const unidadCompleta = unidadDosis === "gamas" ? "gamas (mcg/kg/min)" : unidadDosis;
 
+  // Traduce el valor interno de unidadDosis a la unidad "semántica" real,
+  // para poder compararla contra equivalenciaRef.unidad. "gamas" es el
+  // nombre clínico coloquial de mcg/kg/min, no una unidad distinta.
+  const unidadDosisSemantica = unidadDosis === "gamas" ? "mcg/kg/min" : unidadDosis;
+
   // Convierte el resultado calculado (siempre disponible como mcgPorMin,
   // o uiPorHora para drogas en UI) a la unidad en que está expresado el
   // rango de referencia de la droga, para poder comparar directamente.
@@ -670,7 +836,7 @@ function Diluciones() {
       ) : (
         <>
           <div className="panel-row two-col">
-            <Field label="Dosis total de ampollas en suero/solución" unit={unidadPrep} value={dosisMg} onChange={setDosisMg} placeholder={droga === "Insulina corriente" ? "ej: 100" : droga === "Heparina sódica" ? "ej: 25000" : unidadPrep === "mcg" ? "ej: 750" : "ej: 4"} />
+            <Field label="Dosis total" unit={unidadPrep} value={dosisMg} onChange={setDosisMg} placeholder={droga === "Insulina corriente" ? "ej: 100" : droga === "Heparina sódica" ? "ej: 25000" : unidadPrep === "mcg" ? "ej: 750" : "ej: 4"} />
             <label className="field">
               <span className="field-label">Volumen de suero</span>
               <div className="select-wrap">
@@ -851,10 +1017,12 @@ function Diluciones() {
             )}
             {resultado && (
               <>
-                <div className="result-line">
-                  <span className="result-label">Concentración</span>
-                  <span className="result-value-sm">{fmtDosis(resultado.concentracionMcgMl, 2)} {esUI ? "UI/ml" : "mcg/ml"}</span>
-                </div>
+                {equivalenciaRef && equivalenciaRef.unidad !== unidadDosisSemantica && (
+                  <div className="result-line result-line-equivalencia">
+                    <span className="result-label">Equivalente a</span>
+                    <span className="result-value-sm result-value-equivalencia">{fmtDosis(equivalenciaRef.valor, 3)} {equivalenciaRef.unidad}</span>
+                  </div>
+                )}
                 {resultado.faltaPeso && (
                   <div className="result-warning">
                     <AlertCircle size={14} /> Falta el peso del paciente para calcular en {unidadCompleta}
@@ -883,19 +1051,10 @@ function Diluciones() {
             if (!dentroDeRango) return null;
             return (
               <div className="aviso-rango-ok">
-                ✓ Dentro de los valores de referencia habituales
+                ✓ Dentro de valores recomendados
               </div>
             );
           })()}
-
-          {equivalenciaRef && (
-            <div className="ref-dosis">
-              <div className="ref-dosis-titulo">Equivalente en unidad de referencia</div>
-              <div className="ref-dosis-texto">
-                Esta velocidad equivale a <strong>{fmtDosis(equivalenciaRef.valor, 3)} {equivalenciaRef.unidad}</strong>.
-              </div>
-            </div>
-          )}
 
           {equivalenciaRef && (() => {
             const ref = DOSIS_REFERENCIA[droga];
@@ -930,9 +1089,24 @@ function Diluciones() {
       {DOSIS_REFERENCIA[droga] && (usaFrecuencia ? num(dosisPorToma) > 0 : (resultado && !resultado.faltaPeso && (resultado.mlPorHora != null || resultado.dosisResultante != null))) && (
         <div className="ref-dosis">
           <div className="ref-dosis-titulo">
-            {DOSIS_REFERENCIA[droga].techo ? "Dosis máxima de referencia" : "Sobre el máximo de esta droga"}
+            {DOSIS_REFERENCIA[droga].techo ? "Dosis máxima recomendada" : "Sobre el máximo de esta droga"}
           </div>
-          <div className="ref-dosis-texto">{resaltarDosis(DOSIS_REFERENCIA[droga].texto)}</div>
+          {DOSIS_REFERENCIA[droga].escenarios ? (
+            <div className="ref-dosis-escenarios">
+              {DOSIS_REFERENCIA[droga].escenarios.map((esc, i) => (
+                <div className="ref-dosis-escenario" key={i}>
+                  <div className="ref-dosis-escenario-titulo">{esc.titulo}</div>
+                  <ul className="ref-dosis-escenario-lista">
+                    {esc.items.map((item, j) => (
+                      <li key={j}>{resaltarDosis(item)}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="ref-dosis-texto">{resaltarDosis(DOSIS_REFERENCIA[droga].texto)}</div>
+          )}
         </div>
       )}
 
@@ -1133,15 +1307,37 @@ function Goteo() {
 export default function App() {
   const [tab, setTab] = useState("diluciones");
   const [scrolled, setScrolled] = useState(false);
+  const [tema, setTema] = useState(() => {
+    try {
+      return localStorage.getItem("diluciones-uti-tema") || "dark";
+    } catch {
+      return "dark";
+    }
+  });
 
   useEffect(() => {
-    const getScrollY = () =>
-      window.scrollY ||
-      document.documentElement.scrollTop ||
-      document.body.scrollTop ||
-      0;
+    try {
+      localStorage.setItem("diluciones-uti-tema", tema);
+    } catch {
+      // localStorage puede no estar disponible (modo privado, etc.);
+      // el tema simplemente no persiste entre sesiones en ese caso.
+    }
+  }, [tema]);
 
+  const toggleTheme = () => setTema((t) => (t === "dark" ? "light" : "dark"));
+  const esOscuro = tema === "dark";
+
+  useEffect(() => {
     const onScroll = () => setScrolled(getScrollY() > 16);
+
+    function getScrollY() {
+      return (
+        window.scrollY ||
+        document.documentElement.scrollTop ||
+        document.body.scrollTop ||
+        0
+      );
+    }
 
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -1152,10 +1348,127 @@ export default function App() {
     };
   }, []);
 
+  const headerColapsado = scrolled || tab !== "inicio";
+
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-theme={tema}>
       <style>{`
         * { box-sizing: border-box; }
+        :root {
+          /* Fondos */
+          --bg-app: #0B1210;
+          --bg-app-grad-top: #0F1B17;
+          --bg-panel: #101C18;
+          --bg-panel-alt: #0B1512;
+          --border-panel: #1B2A25;
+          --dropdown-bg: linear-gradient(165deg, rgba(22, 38, 32, 0.96) 0%, rgba(9, 18, 15, 0.94) 40%, rgba(9, 18, 15, 0.96) 100%);
+          --dropdown-border: rgba(255, 255, 255, 0.14);
+          --dropdown-item-active: rgba(255, 255, 255, 0.10);
+
+          /* Texto */
+          --text-primary: #EAF2EE;
+          --text-heading: #F4FBF7;
+          --text-secondary: #9FB8AC;
+          --text-tertiary: #6F8A7F;
+          --text-quaternary: #5C7568;
+          --text-quinary: #C7D6CE;
+          --text-dim: #8FB3A3;
+
+          /* Acentos */
+          --accent-green: #4FD195;
+          --accent-green-soft: #3DAE82;
+          --accent-green-pale: #7FC9A3;
+          --accent-green-deep: #5FA88A;
+          --accent-green-border: #2D5C49;
+          --accent-red: #FF453A;
+          --accent-red-soft: #FF6B6B;
+          --accent-red-softer: #FF8A8A;
+          --accent-red-pale: #F4C7C7;
+          --accent-red-border: #D14242;
+          --accent-violet: #BF5AF2;
+          --accent-orange: #FF9F0A;
+          --accent-orange-deep: #E08A3D;
+          --accent-yellow: #FFD60A;
+          --accent-yellow-soft: #F0C04D;
+          --accent-gold: #D9A441;
+          --accent-gold-pale: #F0DCA0;
+          --accent-tan: #C9B98E;
+          --accent-tan-pale: #E8DCC0;
+
+          /* Cajas de alerta / nota (fondo + borde por tono) */
+          --box-amber-bg: #15120A;
+          --box-amber-border: #3D331A;
+          --box-amber-border-soft: #5C3A1A;
+          --box-amber-border-deep: #1A1209;
+          --box-red-bg: #2A0E0E;
+          --box-red-bg-soft: #2A2210;
+          --box-blue-bg: #0C1A22;
+          --box-blue-border: #2A4A5C;
+          --box-green-bg: #0E2118;
+          --box-green-border: #1F3D2D;
+          --box-green-border-soft: #163027;
+          --box-green-bg-soft: #1B2E26;
+          --box-neutral-border: #25372F;
+
+          /* Otros */
+          --value-muted: #DCEBE3;
+          --accent-select: #3DAE82;
+        }
+        [data-theme="light"] {
+          --bg-app: #EEF3EF;
+          --bg-app-grad-top: #F7FAF7;
+          --bg-panel: #FBFDFB;
+          --bg-panel-alt: #F4F8F5;
+          --border-panel: #DCE6E0;
+          --dropdown-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.32) 0%, rgba(247, 250, 248, 0.28) 40%, rgba(241, 246, 243, 0.32) 100%);
+          --dropdown-border: rgba(15, 33, 28, 0.12);
+          --dropdown-item-active: rgba(15, 33, 28, 0.07);
+
+          --text-primary: #15211C;
+          --text-heading: #0E1714;
+          --text-secondary: #4A6359;
+          --text-tertiary: #6E8579;
+          --text-quaternary: #88998F;
+          --text-quinary: #3C4F47;
+          --text-dim: #5C7568;
+
+          --accent-green: #1F9E63;
+          --accent-green-soft: #2E9C6F;
+          --accent-green-pale: #3E8F6B;
+          --accent-green-deep: #2C7A5C;
+          --accent-green-border: #A6D9C2;
+          --accent-red: #D6332A;
+          --accent-red-soft: #C44A42;
+          --accent-red-softer: #B85C56;
+          --accent-red-pale: #7A2A26;
+          --accent-red-border: #D14242;
+          --accent-violet: #8A3FC4;
+          --accent-orange: #C97200;
+          --accent-orange-deep: #A8631F;
+          --accent-yellow: #9C7E00;
+          --accent-yellow-soft: #8A6A1A;
+          --accent-gold: #92681E;
+          --accent-gold-pale: #6B4E14;
+          --accent-tan: #6B5A38;
+          --accent-tan-pale: #4F4128;
+
+          --box-amber-bg: #FBF3E2;
+          --box-amber-border: #E4CE9C;
+          --box-amber-border-soft: #D8BB7A;
+          --box-amber-border-deep: #C9A65C;
+          --box-red-bg: #FBE9E8;
+          --box-red-bg-soft: #FBEFE0;
+          --box-blue-bg: #E7F0F5;
+          --box-blue-border: #B9D2E0;
+          --box-green-bg: #E7F5EE;
+          --box-green-border: #B9E0CC;
+          --box-green-border-soft: #CFE9DC;
+          --box-green-bg-soft: #DCF0E5;
+          --box-neutral-border: #D7E2DC;
+
+          --value-muted: #3C4F47;
+          --accent-select: #1F9E63;
+        }
         html, body {
           overscroll-behavior-y: none;
         }
@@ -1164,8 +1477,8 @@ export default function App() {
         }
         .app-shell {
           min-height: 100vh;
-          background: #0B1210;
-          color: #EAF2EE;
+          background: var(--bg-app);
+          color: var(--text-primary);
           font-family: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
           display: flex;
           flex-direction: column;
@@ -1173,8 +1486,8 @@ export default function App() {
         }
         .topbar {
           padding: 28px 20px 18px;
-          border-bottom: 1px solid #1B2A25;
-          background: linear-gradient(180deg, #0F1B17 0%, #0B1210 100%);
+          border-bottom: 1px solid var(--border-panel);
+          background: linear-gradient(180deg, var(--bg-app-grad-top) 0%, var(--bg-app) 100%);
           position: fixed;
           top: 0;
           left: 0;
@@ -1209,13 +1522,13 @@ export default function App() {
           font-size: 11px;
           letter-spacing: 0.12em;
           text-transform: uppercase;
-          color: #5FA88A;
+          color: var(--accent-green-deep);
           font-weight: 600;
         }
         .topbar-by {
           font-size: 11.5px;
           font-style: italic;
-          color: #8FB3A3;
+          color: var(--text-dim);
           white-space: nowrap;
         }
         .topbar-title {
@@ -1223,7 +1536,7 @@ export default function App() {
           font-size: 26px;
           font-weight: 600;
           letter-spacing: -0.01em;
-          color: #F4FBF7;
+          color: var(--text-heading);
           transition: font-size 0.25s ease;
         }
         .topbar.topbar-collapsed .topbar-title {
@@ -1231,7 +1544,7 @@ export default function App() {
         }
         .topbar-sub {
           font-size: 13px;
-          color: #6F8A7F;
+          color: var(--text-tertiary);
           margin-top: 2px;
           max-height: 20px;
           overflow: hidden;
@@ -1248,11 +1561,11 @@ export default function App() {
           margin: 0 auto;
         }
         .topbar-spacer {
-          height: 116px;
+          height: 108px;
           transition: height 0.25s ease;
         }
         .topbar.topbar-collapsed + .topbar-spacer {
-          height: 46px;
+          height: 36px;
         }
         .content {
           flex: 1;
@@ -1262,13 +1575,13 @@ export default function App() {
           width: 100%;
         }
         .panel {
-          background: #101C18;
-          border: 1px solid #1B2A25;
+          background: var(--bg-panel);
+          border: 1px solid var(--border-panel);
           border-radius: 16px;
           padding: 18px;
         }
         .panel-row {
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
         .panel-row.two-col {
           display: grid;
@@ -1281,14 +1594,14 @@ export default function App() {
           align-items: center;
           gap: 8px;
           font-size: 13px;
-          color: #9FB8AC;
+          color: var(--text-secondary);
           margin-bottom: 14px;
           cursor: pointer;
         }
         .checkbox-row input[type="checkbox"] {
           width: 17px;
           height: 17px;
-          accent-color: #3DAE82;
+          accent-color: var(--accent-green-soft);
           cursor: pointer;
         }
         .campo-calculado {
@@ -1297,27 +1610,27 @@ export default function App() {
           gap: 6px;
         }
         .campo-calculado-valor {
-          background: #0B1512;
-          border: 1px solid #1B2A25;
+          background: var(--bg-panel-alt);
+          border: 1px solid var(--border-panel);
           border-radius: 10px;
           padding: 12px 14px;
           font-size: 17px;
-          color: #9FB8AC;
+          color: var(--text-secondary);
           font-variant-numeric: tabular-nums;
         }
         .info-nota-ampollas {
           font-size: 12.5px;
-          color: #6F8A7F;
+          color: var(--text-tertiary);
           margin-top: -4px;
           margin-bottom: 16px;
         }
         .info-nota-ampollas strong {
-          color: #9FB8AC;
+          color: var(--text-secondary);
           font-weight: 700;
         }
         .volumen-diluido-block {
-          background: #0B1512;
-          border: 1px solid #1B2A25;
+          background: var(--bg-panel-alt);
+          border: 1px solid var(--border-panel);
           border-radius: 12px;
           padding: 18px 16px;
           margin-top: 6px;
@@ -1334,13 +1647,13 @@ export default function App() {
         }
         .volumen-diluido-label-top {
           font-size: 14px;
-          color: #FF9F0A;
+          color: var(--accent-orange);
         }
         .volumen-diluido-label-bottom {
           font-size: 12px;
           font-weight: 700;
           letter-spacing: 0.04em;
-          color: #4FD195;
+          color: var(--accent-green);
           white-space: nowrap;
         }
         .volumen-diluido-valor {
@@ -1353,24 +1666,24 @@ export default function App() {
           font-size: 44px;
           font-weight: 800;
           font-variant-numeric: tabular-nums;
-          color: #4FD195;
+          color: var(--accent-green);
           letter-spacing: -0.02em;
           line-height: 1;
         }
         .volumen-diluido-valor-unit {
           font-size: 18px;
-          color: #4FD195;
+          color: var(--accent-green);
           font-weight: 600;
         }
         .section-title {
           font-size: 11px;
           text-transform: uppercase;
           letter-spacing: 0.1em;
-          color: #5FA88A;
+          color: var(--accent-green-deep);
           font-weight: 700;
-          margin: 18px 0 10px;
-          padding-top: 14px;
-          border-top: 1px solid #1B2A25;
+          margin: 4px 0 8px;
+          padding-top: 4px;
+          border-top: 1px solid var(--border-panel);
         }
         .panel-row:first-child + .section-title,
         .panel > .section-title:first-of-type {
@@ -1385,7 +1698,7 @@ export default function App() {
         }
         .field-label {
           font-size: 12.5px;
-          color: #9FB8AC;
+          color: var(--text-secondary);
           font-weight: 500;
         }
         .field-input-wrap, .select-wrap {
@@ -1395,37 +1708,37 @@ export default function App() {
         }
         .field-input, .field-select {
           width: 100%;
-          background: #0B1512;
-          border: 1px solid #25372F;
+          background: var(--bg-panel-alt);
+          border: 1px solid var(--box-neutral-border);
           border-radius: 10px;
           padding: 12px 14px;
           font-size: 17px;
-          color: #F4FBF7;
+          color: var(--text-heading);
           font-variant-numeric: tabular-nums;
           outline: none;
           transition: border-color 0.15s;
           appearance: none;
         }
         .field-input:focus, .field-select:focus {
-          border-color: #3DAE82;
+          border-color: var(--accent-green-soft);
         }
         .field-unit {
           position: absolute;
           right: 14px;
           font-size: 13px;
-          color: #6F8A7F;
+          color: var(--text-tertiary);
           pointer-events: none;
         }
         .select-chevron {
           position: absolute;
           right: 12px;
-          color: #6F8A7F;
+          color: var(--text-tertiary);
           pointer-events: none;
         }
         .field-select { padding-right: 36px; cursor: pointer; }
         .field-select-riesgo {
-          border-color: #D14242 !important;
-          color: #FF8A8A !important;
+          border-color: var(--accent-red-border) !important;
+          color: var(--accent-red-softer) !important;
           font-weight: 400;
           box-shadow: 0 0 0 1px rgba(209, 66, 66, 0.25);
         }
@@ -1439,13 +1752,13 @@ export default function App() {
           align-items: center;
           justify-content: space-between;
           text-align: left;
-          background: #0B1512;
+          background: var(--bg-panel-alt);
           font-family: inherit;
         }
         .dropdown-custom-warn {
           flex-shrink: 0;
           margin-left: 8px;
-          color: #FF9F0A;
+          color: var(--accent-orange);
         }
         .dropdown-custom-overlay {
           position: fixed;
@@ -1458,7 +1771,7 @@ export default function App() {
           top: calc(100% + 6px);
           left: 0;
           right: 0;
-          border: 1px solid rgba(255, 255, 255, 0.14);
+          border: 1px solid var(--dropdown-border);
           border-radius: 14px;
           box-shadow:
             0 16px 40px rgba(0, 0, 0, 0.55),
@@ -1466,7 +1779,9 @@ export default function App() {
             inset 0 0 24px rgba(255, 255, 255, 0.04);
           z-index: 50;
           overflow: hidden;
-          background: linear-gradient(165deg, rgba(22, 38, 32, 0.91) 0%, rgba(9, 18, 15, 0.88) 40%, rgba(9, 18, 15, 0.91) 100%);
+          background: var(--dropdown-bg);
+          backdrop-filter: blur(10px) saturate(1.5);
+          -webkit-backdrop-filter: blur(10px) saturate(1.5);
         }
         .dropdown-custom-scroll {
           max-height: 340px;
@@ -1484,7 +1799,7 @@ export default function App() {
           gap: 8px;
           background: transparent;
           border: none;
-          color: #EAF2EE;
+          color: var(--text-primary);
           font-size: 16px;
           font-family: inherit;
           text-align: left;
@@ -1493,27 +1808,27 @@ export default function App() {
           cursor: pointer;
         }
         .dropdown-custom-item:active {
-          background: rgba(22, 36, 31, 0.7);
+          background: var(--dropdown-item-active);
         }
         .dropdown-custom-item-riesgo {
-          color: #EAF2EE;
+          color: var(--text-primary);
           font-weight: 400;
           font-size: 15px;
-          border-left: 4px solid #FF453A;
+          border-left: 4px solid var(--accent-red);
           padding-left: 12px;
           border-top-left-radius: 0;
           border-bottom-left-radius: 0;
         }
         .dropdown-custom-item-opioide {
-          color: #EAF2EE;
+          color: var(--text-primary);
           font-weight: 400;
-          border-left: 4px solid #BF5AF2;
+          border-left: 4px solid var(--accent-violet);
           padding-left: 12px;
           border-top-left-radius: 0;
           border-bottom-left-radius: 0;
         }
         .dropdown-custom-item-bloqueante {
-          color: #EAF2EE;
+          color: var(--text-primary);
           font-weight: 400;
           border-left: 4px solid rgba(138, 154, 91, 0.75);
           padding-left: 12px;
@@ -1549,9 +1864,9 @@ export default function App() {
             inset 0 0 16px rgba(191, 90, 242, 0.08);
         }
         .btn-reset {
-          background: #15120A;
-          border: 1px solid #3D331A;
-          color: #D9A441;
+          background: var(--box-amber-bg);
+          border: 1px solid var(--box-amber-border);
+          color: var(--accent-gold);
           border-radius: 10px;
           padding: 8px 14px;
           display: flex;
@@ -1572,7 +1887,7 @@ export default function App() {
           font-size: 10.5px;
           font-weight: 500;
           letter-spacing: 0.08em;
-          color: #C7D6CE;
+          color: var(--text-quinary);
           border: 1px solid rgba(199, 214, 206, 0.30);
           border-radius: 10px;
           background: rgba(199, 214, 206, 0.06);
@@ -1581,13 +1896,13 @@ export default function App() {
           margin-bottom: 14px;
         }
         .grupo-farmacologico-rojo {
-          color: #FF453A;
+          color: var(--accent-red);
           font-weight: 400;
           border-color: rgba(255, 69, 58, 0.45);
           background: rgba(255, 69, 58, 0.08);
         }
         .grupo-farmacologico-violeta {
-          color: #BF5AF2;
+          color: var(--accent-violet);
           font-weight: 400;
           border-color: rgba(191, 90, 242, 0.45);
           background: rgba(191, 90, 242, 0.08);
@@ -1597,12 +1912,12 @@ export default function App() {
           align-items: flex-start;
           justify-content: space-between;
           gap: 10px;
-          margin-bottom: 16px;
+          margin-bottom: 6px;
         }
         .panel-row.first-row { display: flex; align-items: flex-end; gap: 10px; }
         .result-block {
-          background: #0B1512;
-          border: 1px solid #1B2A25;
+          background: var(--bg-panel-alt);
+          border: 1px solid var(--border-panel);
           border-radius: 12px;
           padding: 16px;
           margin-top: 6px;
@@ -1614,15 +1929,44 @@ export default function App() {
         }
         .result-empty {
           font-size: 13px;
-          color: #5C7568;
+          color: var(--text-quaternary);
           text-align: center;
+        }
+        .pafi-categoria {
+          text-align: center;
+          font-size: 13px;
+          font-weight: 700;
+          padding: 10px 14px;
+          border-radius: 12px;
+          margin-top: 4px;
+          margin-bottom: 14px;
+        }
+        .pafi-normal {
+          color: var(--accent-green);
+          background: rgba(74, 222, 128, 0.10);
+          border: 1px solid rgba(74, 222, 128, 0.30);
+        }
+        .pafi-leve {
+          color: var(--accent-yellow);
+          background: rgba(255, 214, 10, 0.10);
+          border: 1px solid rgba(255, 214, 10, 0.30);
+        }
+        .pafi-moderado {
+          color: var(--accent-orange);
+          background: rgba(255, 159, 10, 0.10);
+          border: 1px solid rgba(255, 159, 10, 0.30);
+        }
+        .pafi-severo {
+          color: var(--accent-red);
+          background: rgba(255, 69, 58, 0.10);
+          border: 1px solid rgba(255, 69, 58, 0.30);
         }
         .aviso-falta-campo {
           font-size: 12px;
           font-weight: 600;
-          color: #F0C04D;
+          color: var(--accent-yellow-soft);
           margin-top: -6px;
-          margin-bottom: 16px;
+          margin-bottom: 4px;
         }
         .result-main {
           display: flex;
@@ -1634,12 +1978,12 @@ export default function App() {
           font-size: 38px;
           font-weight: 700;
           font-variant-numeric: tabular-nums;
-          color: #4FD195;
+          color: var(--accent-green);
           letter-spacing: -0.02em;
         }
         .result-main-unit {
           font-size: 15px;
-          color: #9FB8AC;
+          color: var(--text-secondary);
           font-weight: 500;
         }
         .result-line {
@@ -1647,15 +1991,29 @@ export default function App() {
           justify-content: space-between;
           font-size: 13.5px;
         }
-        .result-label { color: #6F8A7F; }
-        .result-value-sm { color: #DCEBE3; font-variant-numeric: tabular-nums; font-weight: 600; }
+        .result-label { color: var(--text-tertiary); }
+        .result-value-sm { color: var(--value-muted); font-variant-numeric: tabular-nums; font-weight: 600; }
+        .result-line-equivalencia {
+          padding-bottom: 6px;
+          margin-bottom: 4px;
+          border-bottom: 1px solid var(--border-panel);
+        }
+        .result-line-equivalencia .result-label {
+          color: var(--text-secondary);
+          font-weight: 600;
+        }
+        .result-value-equivalencia {
+          color: var(--accent-green) !important;
+          font-size: 16px;
+          font-weight: 700;
+        }
         .result-warning {
           display: flex;
           align-items: center;
           gap: 6px;
           font-size: 12.5px;
-          color: #FF9F0A;
-          background: #2A2210;
+          color: var(--accent-orange);
+          background: var(--box-red-bg-soft);
           border-radius: 8px;
           padding: 8px 10px;
         }
@@ -1663,41 +2021,44 @@ export default function App() {
           padding-top: 2px;
         }
         .result-rounded .result-value-sm {
-          color: #9FB8AC;
+          color: var(--text-secondary);
           font-weight: 600;
         }
         .ref-dosis {
-          background: #15120A;
-          border: 1px solid #3D331A;
+          background: var(--box-amber-bg);
+          border: 1px solid var(--box-amber-border);
           border-radius: 12px;
           padding: 12px 14px;
           margin-top: 10px;
         }
         .aviso-rango-ok {
-          background: #0C1A22;
-          border: 1px solid #2A4A5C;
+          background: var(--box-blue-bg);
+          border: 1px solid var(--box-blue-border);
           border-radius: 12px;
           padding: 10px 14px;
           margin-top: 10px;
-          font-size: 11px;
+          font-size: 10.5px;
           text-transform: uppercase;
-          letter-spacing: 0.06em;
-          color: #EAF2EE;
+          letter-spacing: 0.05em;
+          color: var(--text-primary);
           font-weight: 700;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .ref-dosis-extraordinaria {
-          border-color: #5C3A1A;
-          background: #1A1209;
+          border-color: var(--box-amber-border-soft);
+          background: var(--box-amber-border-deep);
         }
         .ref-dosis-extraordinaria .ref-dosis-titulo {
-          color: #E08A3D;
+          color: var(--accent-orange-deep);
         }
         .presentacion-tag {
           font-size: 12.5px;
-          color: #E8DCC0;
+          color: var(--accent-tan-pale);
           font-weight: 600;
-          background: #15120A;
-          border: 1px solid #3D331A;
+          background: var(--box-amber-bg);
+          border: 1px solid var(--box-amber-border);
           border-radius: 8px;
           padding: 8px 12px;
           display: inline-block;
@@ -1706,22 +2067,47 @@ export default function App() {
           font-size: 11px;
           text-transform: uppercase;
           letter-spacing: 0.06em;
-          color: #D9A441;
+          color: var(--accent-gold);
           font-weight: 700;
           margin-bottom: 4px;
         }
         .ref-dosis-texto {
           font-size: 12.5px;
-          color: #C9B98E;
+          color: var(--accent-tan);
           line-height: 1.45;
         }
         .ref-dosis-texto strong {
-          color: #F0DCA0;
+          color: var(--accent-gold-pale);
+          font-weight: 700;
+        }
+        .ref-dosis-escenarios {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .ref-dosis-escenario-titulo {
+          font-size: 12.5px;
+          font-weight: 700;
+          color: var(--accent-gold-pale);
+          margin-bottom: 2px;
+        }
+        .ref-dosis-escenario-lista {
+          margin: 0;
+          padding-left: 18px;
+          list-style-type: disc;
+        }
+        .ref-dosis-escenario-lista li {
+          font-size: 12.5px;
+          color: var(--accent-tan);
+          line-height: 1.45;
+        }
+        .ref-dosis-escenario-lista li strong {
+          color: var(--accent-gold-pale);
           font-weight: 700;
         }
         .alerta-sobredosis {
-          background: #2A0E0E;
-          border: 2px solid #D14242;
+          background: var(--box-red-bg);
+          border: 2px solid var(--accent-red-border);
           border-radius: 12px;
           padding: 14px;
           margin-top: 10px;
@@ -1731,7 +2117,7 @@ export default function App() {
           box-shadow: 0 0 0 1px rgba(209, 66, 66, 0.3), 0 4px 16px rgba(209, 66, 66, 0.25);
         }
         .alerta-sobredosis svg {
-          color: #FF6B6B;
+          color: var(--accent-red-soft);
           flex-shrink: 0;
           margin-top: 1px;
         }
@@ -1739,12 +2125,12 @@ export default function App() {
           font-size: 13px;
           font-weight: 800;
           letter-spacing: 0.02em;
-          color: #FF6B6B;
+          color: var(--accent-red-soft);
           margin-bottom: 4px;
         }
         .alerta-sobredosis-texto {
           font-size: 13px;
-          color: #F4C7C7;
+          color: var(--accent-red-pale);
           line-height: 1.45;
         }
         .disclaimer {
@@ -1752,15 +2138,15 @@ export default function App() {
           gap: 8px;
           align-items: flex-start;
           font-size: 11.5px;
-          color: #5C7568;
+          color: var(--text-quaternary);
           margin-top: 14px;
           line-height: 1.4;
         }
         .disclaimer svg { flex-shrink: 0; margin-top: 1px; }
         .info-note {
-          background: #0E2118;
-          border: 1px solid #1F3D2D;
-          color: #7FC9A3;
+          background: var(--box-green-bg);
+          border: 1px solid var(--box-green-border);
+          color: var(--accent-green-pale);
           font-size: 12.5px;
           line-height: 1.4;
           padding: 10px 12px;
@@ -1769,8 +2155,8 @@ export default function App() {
         }
         .seg-control {
           display: flex;
-          background: #0B1512;
-          border: 1px solid #1B2A25;
+          background: var(--bg-panel-alt);
+          border: 1px solid var(--border-panel);
           border-radius: 10px;
           padding: 3px;
           margin-bottom: 16px;
@@ -1779,7 +2165,7 @@ export default function App() {
           flex: 1;
           background: transparent;
           border: none;
-          color: #6F8A7F;
+          color: var(--text-tertiary);
           font-size: 12.5px;
           font-weight: 600;
           padding: 9px 4px;
@@ -1787,8 +2173,8 @@ export default function App() {
           cursor: pointer;
         }
         .seg-btn.active {
-          background: #1B2E26;
-          color: #4FD195;
+          background: var(--box-green-bg-soft);
+          color: var(--accent-green);
         }
         .mode-tabs {
           display: flex;
@@ -1797,9 +2183,9 @@ export default function App() {
           overflow-x: auto;
         }
         .mode-tab {
-          background: #0B1512;
-          border: 1px solid #1B2A25;
-          color: #9FB8AC;
+          background: var(--bg-panel-alt);
+          border: 1px solid var(--border-panel);
+          color: var(--text-secondary);
           font-size: 12px;
           font-weight: 600;
           padding: 9px 12px;
@@ -1808,17 +2194,124 @@ export default function App() {
           cursor: pointer;
         }
         .mode-tab.active {
-          background: #163027;
-          border-color: #2D5C49;
-          color: #4FD195;
+          background: var(--box-green-border-soft);
+          border-color: var(--accent-green-border);
+          color: var(--accent-green);
+        }
+        .inicio-panel {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
+        .inicio-saludo-titulo {
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--text-heading);
+        }
+        .inicio-saludo-sub {
+          font-size: 13.5px;
+          color: var(--text-tertiary);
+          margin-top: 2px;
+        }
+        .inicio-seccion-titulo {
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: var(--text-tertiary);
+          margin-bottom: 8px;
+        }
+        .inicio-row {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: var(--bg-panel-alt);
+          border: 1px solid var(--border-panel);
+          border-radius: 12px;
+          padding: 13px 14px;
+          margin-bottom: 8px;
+          font-family: inherit;
+          font-size: 14.5px;
+          color: var(--text-primary);
+          cursor: pointer;
+        }
+        .inicio-row:last-child {
+          margin-bottom: 0;
+        }
+        .inicio-row-icon {
+          font-size: 18px;
+        }
+        .inicio-row-label {
+          flex: 1;
+          text-align: left;
+          font-weight: 500;
+        }
+        .inicio-row-chevron {
+          color: var(--text-tertiary);
+          transform: rotate(-90deg);
+        }
+        .inicio-row-switch {
+          cursor: default;
+        }
+        .inicio-footer {
+          text-align: center;
+          font-size: 12px;
+          color: var(--text-quaternary);
+          line-height: 1.5;
+          margin-top: 4px;
+        }
+        .inicio-footer-links {
+          margin-top: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        .inicio-footer-link {
+          color: var(--accent-green);
+          font-size: 12px;
+          font-weight: 600;
+          text-decoration: none;
+        }
+        .inicio-footer-sep {
+          color: var(--text-quaternary);
+          font-size: 12px;
+        }
+        .theme-switch-btn {
+          width: 50px;
+          height: 28px;
+          border-radius: 999px;
+          border: none;
+          padding: 3px;
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+          transition: background 0.25s ease;
+        }
+        .theme-switch-btn.is-dark {
+          background: var(--accent-green);
+          justify-content: flex-end;
+        }
+        .theme-switch-btn.is-light {
+          background: var(--border-panel);
+          justify-content: flex-start;
+        }
+        .theme-switch-knob {
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: #FFFFFF;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+          transition: transform 0.25s ease;
         }
         .tabbar {
           position: fixed;
           bottom: 0;
           left: 0;
           right: 0;
-          background: #0F1B17;
-          border-top: 1px solid #1B2A25;
+          background: var(--bg-app-grad-top);
+          border-top: 1px solid var(--border-panel);
           display: flex;
           padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
           gap: 6px;
@@ -1831,33 +2324,37 @@ export default function App() {
           gap: 4px;
           background: transparent;
           border: none;
-          color: #5C7568;
+          color: var(--text-quaternary);
           font-size: 11px;
           font-weight: 600;
           padding: 8px 0;
           cursor: pointer;
         }
-        .tab-btn.active { color: #4FD195; }
+        .tab-btn.active { color: var(--accent-green); }
       `}</style>
 
-      <div className={`topbar ${scrolled ? "topbar-collapsed" : ""}`}>
+      <div className={`topbar ${headerColapsado ? "topbar-collapsed" : ""}`}>
         <div className="topbar-inner">
           <div className="topbar-eyebrow-row">
             <span className="topbar-eyebrow">UTI · Herramientas clínicas</span>
             <span className="topbar-by">by Keroo</span>
           </div>
-          <div className="topbar-title">Diluciones & Goteo</div>
-          <div className="topbar-sub">Calculadora para enfermería de terapia intensiva</div>
+          <div className="topbar-title">Diluciones Medicamentosas</div>
+          <div className="topbar-sub">Calculadora para enfermería de Área Crítica</div>
         </div>
       </div>
 
       <div className="topbar-spacer" />
 
       <div className="content">
-        {tab === "goteo" ? <Goteo /> : <Diluciones />}
+        {tab === "goteo" ? <Goteo /> : tab === "pafi" ? <PaFi /> : tab === "inicio" ? <Inicio tema={tema} toggleTheme={toggleTheme} setTab={setTab} /> : <Diluciones />}
       </div>
 
       <div className="tabbar">
+        <button className={`tab-btn ${tab === "inicio" ? "active" : ""}`} onClick={() => setTab("inicio")}>
+          <Home size={20} />
+          Inicio
+        </button>
         <button className={`tab-btn ${tab === "diluciones" ? "active" : ""}`} onClick={() => setTab("diluciones")}>
           <Activity size={20} />
           Diluciones
@@ -1865,6 +2362,10 @@ export default function App() {
         <button className={`tab-btn ${tab === "goteo" ? "active" : ""}`} onClick={() => setTab("goteo")}>
           <Droplet size={20} />
           Goteo
+        </button>
+        <button className={`tab-btn ${tab === "pafi" ? "active" : ""}`} onClick={() => setTab("pafi")}>
+          <Wind size={20} />
+          PaFi
         </button>
       </div>
     </div>
