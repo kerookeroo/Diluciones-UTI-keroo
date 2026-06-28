@@ -1574,6 +1574,11 @@ export default function App() {
           margin: 0 auto;
           width: 100%;
         }
+        .content-centrado {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
         .panel {
           background: var(--bg-panel);
           border: 1px solid var(--border-panel);
@@ -2346,7 +2351,7 @@ export default function App() {
 
       <div className="topbar-spacer" />
 
-      <div className="content">
+      <div className={`content ${tab === "inicio" ? "content-centrado" : ""}`}>
         {tab === "goteo" ? <Goteo /> : tab === "pafi" ? <PaFi /> : tab === "inicio" ? <Inicio tema={tema} toggleTheme={toggleTheme} setTab={setTab} /> : <Diluciones />}
       </div>
 
