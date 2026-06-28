@@ -1367,6 +1367,27 @@ export default function App() {
     };
   }, []);
 
+  // Safari iOS ancla position:fixed al "layout viewport" (el tamaño
+  // completo de la página), no al "visual viewport" (lo que realmente
+  // se ve cuando el teclado está abierto). Esto hace que un header fixed
+  // pueda terminar mal posicionado o "tapado" mientras el teclado está
+  // abierto o en transición de cierre. Detectamos esa diferencia de
+  // tamaño y, mientras exista, cambiamos el header de fixed a absolute,
+  // que sí respeta el flujo normal del documento sin esa ambigüedad.
+  const [tecladoAbierto, setTecladoAbierto] = useState(false);
+
+  useEffect(() => {
+    if (!window.visualViewport) return;
+    const vv = window.visualViewport;
+    const checkViewport = () => {
+      const diff = window.innerHeight - vv.height;
+      setTecladoAbierto(diff > 80);
+    };
+    checkViewport();
+    vv.addEventListener("resize", checkViewport);
+    return () => vv.removeEventListener("resize", checkViewport);
+  }, []);
+
   const headerColapsado = scrolled || tab !== "inicio";
 
   return (
@@ -1502,6 +1523,7 @@ export default function App() {
           display: flex;
           flex-direction: column;
           padding-bottom: 90px;
+          position: relative;
         }
         .topbar {
           padding: 28px 20px 18px;
@@ -1520,6 +1542,9 @@ export default function App() {
         }
         .topbar.topbar-collapsed {
           padding: 12px 20px 10px;
+        }
+        .topbar.topbar-teclado-abierto {
+          position: absolute;
         }
         .topbar-eyebrow-row {
           display: flex;
@@ -2357,7 +2382,7 @@ export default function App() {
         .tab-btn.active { color: var(--accent-green); }
       `}</style>
 
-      <div className={`topbar ${headerColapsado ? "topbar-collapsed" : ""}`}>
+      <div className={`topbar ${headerColapsado ? "topbar-collapsed" : ""} ${tecladoAbierto ? "topbar-teclado-abierto" : ""}`}>
         <div className="topbar-inner">
           <div className="topbar-eyebrow-row">
             <span className="topbar-eyebrow">UTI · Herramientas clínicas</span>
