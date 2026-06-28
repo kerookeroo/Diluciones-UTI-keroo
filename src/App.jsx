@@ -317,6 +317,21 @@ function Diluciones() {
     }
   }, [dropdownDrogaAbierto]);
 
+  useEffect(() => {
+    if (!dropdownDrogaAbierto) return;
+    const handleClickFuera = (e) => {
+      if (dropdownDrogaRef.current && !dropdownDrogaRef.current.contains(e.target)) {
+        setDropdownDrogaAbierto(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickFuera);
+    document.addEventListener("touchstart", handleClickFuera);
+    return () => {
+      document.removeEventListener("mousedown", handleClickFuera);
+      document.removeEventListener("touchstart", handleClickFuera);
+    };
+  }, [dropdownDrogaAbierto]);
+
   const [dosisMg, setDosisMg] = useState("");
   const [volumenMl, setVolumenMl] = useState("100");
   const [pesoKg, setPesoKg] = useState("");
