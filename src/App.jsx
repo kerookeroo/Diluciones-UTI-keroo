@@ -1149,7 +1149,7 @@ export default function App() {
           display: flex;
           flex-direction: column;
           padding-bottom: 90px;
-          zoom: 1.05;
+          zoom: 1.10;
         }
         .topbar {
           padding: 28px 20px 18px;
