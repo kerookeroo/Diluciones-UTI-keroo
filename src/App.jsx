@@ -1323,6 +1323,8 @@ function Goteo() {
   );
 }
 
+const ORDEN_TABS = ["inicio", "diluciones", "goteo", "pafi"];
+
 export default function App() {
   const [tab, setTab] = useState("diluciones");
   const [scrolled, setScrolled] = useState(false);
@@ -1389,6 +1391,40 @@ export default function App() {
   }, []);
 
   const headerColapsado = scrolled || tab !== "inicio";
+
+  // Swipe horizontal para cambiar de pestaña. Solo actúa si el gesto es
+  // predominantemente horizontal (para no interferir con el scroll vertical
+  // normal) y supera un umbral mínimo de distancia, para evitar que un
+  // toque accidental dispare un cambio de pestaña no deseado.
+  const touchStartRef = useRef(null);
+
+  const handleTouchStart = (e) => {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!touchStartRef.current) return;
+    const t = e.changedTouches[0];
+    const deltaX = t.clientX - touchStartRef.current.x;
+    const deltaY = t.clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    const UMBRAL_DISTANCIA = 60;
+    const esHorizontal = Math.abs(deltaX) > Math.abs(deltaY) * 1.5;
+    if (!esHorizontal || Math.abs(deltaX) < UMBRAL_DISTANCIA) return;
+
+    const indiceActual = ORDEN_TABS.indexOf(tab);
+    if (indiceActual === -1) return;
+
+    if (deltaX < 0 && indiceActual < ORDEN_TABS.length - 1) {
+      // Deslizó hacia la izquierda: avanza a la pestaña siguiente
+      setTab(ORDEN_TABS[indiceActual + 1]);
+    } else if (deltaX > 0 && indiceActual > 0) {
+      // Deslizó hacia la derecha: vuelve a la pestaña anterior
+      setTab(ORDEN_TABS[indiceActual - 1]);
+    }
+  };
 
   return (
     <div className="app-shell" data-theme={tema}>
@@ -2398,7 +2434,7 @@ export default function App() {
 
       <div className="topbar-spacer" />
 
-      <div className={`content-scale-wrap`}>
+      <div className="content-scale-wrap" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         <div className={`content ${tab === "inicio" ? "content-centrado" : ""}`}>
           {tab === "goteo" ? <Goteo /> : tab === "pafi" ? <PaFi /> : tab === "inicio" ? <Inicio tema={tema} toggleTheme={toggleTheme} setTab={setTab} /> : <Diluciones />}
         </div>
