@@ -1,6 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home } from "lucide-react";
 
+// Escala global de la interfaz para el uso real en el teléfono (todo se veía
+// muy chico en el PWA instalado). Subí o bajá este número para agrandar o
+// achicar TODA la app de forma uniforme. 1.18 = +18%. Ver el useEffect de
+// escalado de viewport más abajo para el detalle de cómo se aplica.
+const ESCALA_UI = 1.18;
+
 const DROGAS = [
   "Adrenalina",
   "Amiodarona",
@@ -1390,6 +1396,36 @@ export default function App() {
     return () => vv.removeEventListener("resize", checkViewport);
   }, []);
 
+  // Escalado global de la UI (reemplazo definitivo del viejo zoom).
+  // En vez de `zoom` (congelaba el scroll en Android) o `transform: scale`
+  // (pantalla blanca en iOS con overflow), achicamos el ancho del viewport
+  // dividiéndolo por ESCALA_UI: el navegador entonces estira ese layout más
+  // angosto para llenar la pantalla, agrandando TODO (texto, botones,
+  // padding, íconos) de forma uniforme y sin ningún bug de renderizado.
+  // Se recalcula al rotar. Como es px puro (no rem), este es el único punto
+  // real donde se controla el tamaño general de la app.
+  useEffect(() => {
+    let meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "viewport");
+      document.head.appendChild(meta);
+    }
+    const aplicarEscala = () => {
+      // Ancho de referencia estable (lado corto = ancho en vertical), para
+      // que el factor sea consistente en cualquier iPhone/Android.
+      const anchoBase =
+        Math.min(window.screen.width, window.screen.height) ||
+        window.innerWidth ||
+        390;
+      const ancho = Math.round(anchoBase / ESCALA_UI);
+      meta.setAttribute("content", `width=${ancho}, viewport-fit=cover`);
+    };
+    aplicarEscala();
+    window.addEventListener("orientationchange", aplicarEscala);
+    return () => window.removeEventListener("orientationchange", aplicarEscala);
+  }, []);
+
   const headerColapsado = scrolled || tab !== "inicio";
 
   const touchStartRef = useRef(null);
@@ -1607,10 +1643,15 @@ export default function App() {
           overscroll-behavior-y: none;
         }
         html {
-          font-size: 18.88px;
+          /* El agrandado global lo maneja el viewport (ver ESCALA_UI y su
+             useEffect). Base normal de 16px: evita agrandar de más el texto
+             que hereda tamaño y previene el auto-zoom de iOS al enfocar inputs. */
+          font-size: 16px;
         }
         .app-shell {
           min-height: 100vh;
+          height: 100vh;
+          height: 100dvh;
           background: var(--bg-app);
           color: var(--text-primary);
           font-family: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
@@ -1707,6 +1748,7 @@ export default function App() {
         }
         .content-scale-wrap {
           flex: 1;
+          min-height: 0;
           overflow: hidden;
           position: relative;
         }
@@ -1721,9 +1763,18 @@ export default function App() {
         }
         .tab-panel {
           min-width: 100%;
+          height: 100%;
+          position: relative;
+          overflow: hidden;
+        }
+        /* El scroll vive acá, no en .tab-panel. Así el divisor (::after sobre
+           .tab-panel) se mide contra la altura completa del panel y no contra
+           la del contenido — evita el bug de iOS donde la línea cortaba corto
+           en tabs con poco contenido (ej. Goteo). */
+        .tab-panel-scroll {
+          height: 100%;
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
-          position: relative;
         }
         /* Divisor en la costura entre paneles: hairline central + sombra
            difuminada simétrica. Solo visible mientras se hace swipe o hay
@@ -2548,23 +2599,31 @@ export default function App() {
       >
         <div className="tab-track" ref={trackRef}>
           <div className="tab-panel">
-            <div className="tab-panel-inner content-centrado">
-              <Inicio tema={tema} toggleTheme={toggleTheme} setTab={cambiarTab} />
+            <div className="tab-panel-scroll">
+              <div className="tab-panel-inner content-centrado">
+                <Inicio tema={tema} toggleTheme={toggleTheme} setTab={cambiarTab} />
+              </div>
             </div>
           </div>
           <div className="tab-panel">
-            <div className="tab-panel-inner">
-              <Diluciones />
+            <div className="tab-panel-scroll">
+              <div className="tab-panel-inner">
+                <Diluciones />
+              </div>
             </div>
           </div>
           <div className="tab-panel">
-            <div className="tab-panel-inner">
-              <Goteo />
+            <div className="tab-panel-scroll">
+              <div className="tab-panel-inner">
+                <Goteo />
+              </div>
             </div>
           </div>
           <div className="tab-panel">
-            <div className="tab-panel-inner">
-              <PaFi />
+            <div className="tab-panel-scroll">
+              <div className="tab-panel-inner">
+                <PaFi />
+              </div>
             </div>
           </div>
         </div>
