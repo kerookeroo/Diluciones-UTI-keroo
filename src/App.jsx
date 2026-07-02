@@ -1413,9 +1413,26 @@ export default function App() {
     el.style.transform = `translateX(${pct}%)`;
   };
 
+  // Muestra/oculta el divisor de la costura entre paneles. Se enciende al
+  // iniciar un swipe o una transición y se apaga cuando el track se asienta,
+  // así en reposo la pantalla queda limpia (full-bleed) sin línea ni sombra.
+  const seamTimerRef = useRef(null);
+  const showSeam = () => {
+    if (seamTimerRef.current) { clearTimeout(seamTimerRef.current); seamTimerRef.current = null; }
+    trackRef.current?.classList.add("seam-on");
+  };
+  const hideSeam = (delay = 300) => {
+    if (seamTimerRef.current) clearTimeout(seamTimerRef.current);
+    seamTimerRef.current = setTimeout(() => {
+      trackRef.current?.classList.remove("seam-on");
+      seamTimerRef.current = null;
+    }, delay);
+  };
+
   const handleTouchStart = (e) => {
     touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, locked: false };
     setTrack(getOffset(tabRef.current), false);
+    showSeam();
   };
 
   const handleTouchMove = (e) => {
@@ -1423,7 +1440,7 @@ export default function App() {
     if (!s || s.locked) return;
     const dx = e.touches[0].clientX - s.x;
     const dy = e.touches[0].clientY - s.y;
-    if (Math.abs(dy) > Math.abs(dx) * 1.3 && Math.abs(dy) > 8) { s.locked = true; return; }
+    if (Math.abs(dy) > Math.abs(dx) * 1.3 && Math.abs(dy) > 8) { s.locked = true; hideSeam(0); return; }
     const idx = ORDEN_TABS.indexOf(tabRef.current);
     const resist = (idx === 0 && dx > 0) || (idx === ORDEN_TABS.length - 1 && dx < 0) ? 0.2 : 1;
     setTrack(getOffset(tabRef.current) + (dx / window.innerWidth) * 100 * resist, false);
@@ -1432,6 +1449,7 @@ export default function App() {
   const handleTouchEnd = (e) => {
     const s = touchStartRef.current;
     touchStartRef.current = null;
+    hideSeam(300);
     if (!s || s.locked) { setTrack(getOffset(tabRef.current), true); return; }
     const dx = e.changedTouches[0].clientX - s.x;
     const idx = ORDEN_TABS.indexOf(tabRef.current);
@@ -1454,9 +1472,11 @@ export default function App() {
     const idxActual = ORDEN_TABS.indexOf(tabRef.current);
     const idxNuevo = ORDEN_TABS.indexOf(nuevoTab);
     if (idxNuevo === idxActual) return;
+    showSeam();
     setTrack(getOffset(nuevoTab), true);
     setIsTransitioning(true);
     setTimeout(() => { setTab(nuevoTab); setIsTransitioning(false); }, 280);
+    hideSeam(320);
   };
 
   return (
@@ -1470,6 +1490,9 @@ export default function App() {
           --bg-panel: #101C18;
           --bg-panel-alt: #0B1512;
           --border-panel: #1B2A25;
+          /* Costura entre paneles al hacer swipe (hairline + sombra difuminada) */
+          --seam-line: rgba(255, 255, 255, 0.09);
+          --seam-shadow: rgba(0, 0, 0, 0.55);
           --dropdown-bg: linear-gradient(165deg, rgba(22, 38, 32, 0.96) 0%, rgba(9, 18, 15, 0.94) 40%, rgba(9, 18, 15, 0.96) 100%);
           --dropdown-border: rgba(255, 255, 255, 0.14);
           --dropdown-item-active: rgba(255, 255, 255, 0.10);
@@ -1529,6 +1552,8 @@ export default function App() {
           --bg-panel: #FBFDFB;
           --bg-panel-alt: #F4F8F5;
           --border-panel: #DCE6E0;
+          --seam-line: rgba(15, 33, 28, 0.14);
+          --seam-shadow: rgba(15, 33, 28, 0.12);
           --dropdown-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.32) 0%, rgba(247, 250, 248, 0.28) 40%, rgba(241, 246, 243, 0.32) 100%);
           --dropdown-border: rgba(15, 33, 28, 0.12);
           --dropdown-item-active: rgba(15, 33, 28, 0.07);
@@ -1698,6 +1723,27 @@ export default function App() {
           min-width: 100%;
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
+          position: relative;
+        }
+        /* Divisor en la costura entre paneles: hairline central + sombra
+           difuminada simétrica. Solo visible mientras se hace swipe o hay
+           transición (clase .seam-on en el track); en reposo desaparece. */
+        .tab-panel::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          right: 0;
+          width: 1px;
+          background: var(--seam-line);
+          box-shadow: 0 0 20px 7px var(--seam-shadow);
+          opacity: 0;
+          transition: opacity 0.2s ease;
+          pointer-events: none;
+          z-index: 5;
+        }
+        .tab-track.seam-on .tab-panel::after {
+          opacity: 1;
         }
         .tab-panel-inner {
           padding: 18px 16px;
