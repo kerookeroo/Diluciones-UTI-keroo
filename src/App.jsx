@@ -337,17 +337,17 @@ function Inicio({ tema, toggleTheme, setTab }) {
 
       <div className="inicio-seccion">
         <div className="inicio-seccion-titulo">ACCESOS DIRECTOS</div>
-        <button type="button" className="inicio-row" onClick={() => setTab("diluciones")}>
+        <button type="button" className="inicio-row" onClick={() => cambiarTab("diluciones")}>
           <span className="inicio-row-icon">💉</span>
           <span className="inicio-row-label">Diluciones Medicamentosas</span>
           <ChevronDown size={16} className="inicio-row-chevron" />
         </button>
-        <button type="button" className="inicio-row" onClick={() => setTab("goteo")}>
+        <button type="button" className="inicio-row" onClick={() => cambiarTab("goteo")}>
           <span className="inicio-row-icon">💧</span>
           <span className="inicio-row-label">Cálculo de Goteo / Tiempo</span>
           <ChevronDown size={16} className="inicio-row-chevron" />
         </button>
-        <button type="button" className="inicio-row" onClick={() => setTab("pafi")}>
+        <button type="button" className="inicio-row" onClick={() => cambiarTab("pafi")}>
           <span className="inicio-row-icon">🫁</span>
           <span className="inicio-row-label">Relación PaFi (Berlín 2012)</span>
           <ChevronDown size={16} className="inicio-row-chevron" />
@@ -1392,38 +1392,71 @@ export default function App() {
 
   const headerColapsado = scrolled || tab !== "inicio";
 
-  // Swipe horizontal para cambiar de pestaña. Solo actúa si el gesto es
-  // predominantemente horizontal (para no interferir con el scroll vertical
-  // normal) y supera un umbral mínimo de distancia, para evitar que un
-  // toque accidental dispare un cambio de pestaña no deseado.
   const touchStartRef = useRef(null);
+  const trackRef = useRef(null);
+  const tabRef = useRef(tab);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  useEffect(() => { tabRef.current = tab; }, [tab]);
+
+  // Al montar, posiciona el track sin animación en el tab inicial
+  useEffect(() => {
+    setTrack(getOffset(tab), false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const getOffset = (t) => -ORDEN_TABS.indexOf(t) * 100;
+
+  const setTrack = (pct, animated) => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.classList.toggle("no-transition", !animated);
+    el.style.transform = `translateX(${pct}%)`;
+  };
 
   const handleTouchStart = (e) => {
-    const t = e.touches[0];
-    touchStartRef.current = { x: t.clientX, y: t.clientY };
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, locked: false };
+    setTrack(getOffset(tabRef.current), false);
+  };
+
+  const handleTouchMove = (e) => {
+    const s = touchStartRef.current;
+    if (!s || s.locked) return;
+    const dx = e.touches[0].clientX - s.x;
+    const dy = e.touches[0].clientY - s.y;
+    if (Math.abs(dy) > Math.abs(dx) * 1.3 && Math.abs(dy) > 8) { s.locked = true; return; }
+    const idx = ORDEN_TABS.indexOf(tabRef.current);
+    const resist = (idx === 0 && dx > 0) || (idx === ORDEN_TABS.length - 1 && dx < 0) ? 0.2 : 1;
+    setTrack(getOffset(tabRef.current) + (dx / window.innerWidth) * 100 * resist, false);
   };
 
   const handleTouchEnd = (e) => {
-    if (!touchStartRef.current) return;
-    const t = e.changedTouches[0];
-    const deltaX = t.clientX - touchStartRef.current.x;
-    const deltaY = t.clientY - touchStartRef.current.y;
+    const s = touchStartRef.current;
     touchStartRef.current = null;
-
-    const UMBRAL_DISTANCIA = 60;
-    const esHorizontal = Math.abs(deltaX) > Math.abs(deltaY) * 1.5;
-    if (!esHorizontal || Math.abs(deltaX) < UMBRAL_DISTANCIA) return;
-
-    const indiceActual = ORDEN_TABS.indexOf(tab);
-    if (indiceActual === -1) return;
-
-    if (deltaX < 0 && indiceActual < ORDEN_TABS.length - 1) {
-      // Deslizó hacia la izquierda: avanza a la pestaña siguiente
-      setTab(ORDEN_TABS[indiceActual + 1]);
-    } else if (deltaX > 0 && indiceActual > 0) {
-      // Deslizó hacia la derecha: vuelve a la pestaña anterior
-      setTab(ORDEN_TABS[indiceActual - 1]);
+    if (!s || s.locked) { setTrack(getOffset(tabRef.current), true); return; }
+    const dx = e.changedTouches[0].clientX - s.x;
+    const idx = ORDEN_TABS.indexOf(tabRef.current);
+    if (dx < -50 && idx < ORDEN_TABS.length - 1) {
+      const next = ORDEN_TABS[idx + 1];
+      setTrack(getOffset(next), true);
+      setIsTransitioning(true);
+      setTimeout(() => { setTab(next); setIsTransitioning(false); }, 280);
+    } else if (dx > 50 && idx > 0) {
+      const prev = ORDEN_TABS[idx - 1];
+      setTrack(getOffset(prev), true);
+      setIsTransitioning(true);
+      setTimeout(() => { setTab(prev); setIsTransitioning(false); }, 280);
+    } else {
+      setTrack(getOffset(tabRef.current), true);
     }
+  };
+
+  const cambiarTab = (nuevoTab) => {
+    const idxActual = ORDEN_TABS.indexOf(tabRef.current);
+    const idxNuevo = ORDEN_TABS.indexOf(nuevoTab);
+    if (idxNuevo === idxActual) return;
+    setTrack(getOffset(nuevoTab), true);
+    setIsTransitioning(true);
+    setTimeout(() => { setTab(nuevoTab); setIsTransitioning(false); }, 280);
   };
 
   return (
@@ -1548,6 +1581,9 @@ export default function App() {
         html, body {
           overscroll-behavior-y: none;
         }
+        html {
+          font-size: 18.88px;
+        }
         .app-shell {
           min-height: 100vh;
           background: var(--bg-app);
@@ -1646,10 +1682,34 @@ export default function App() {
         }
         .content-scale-wrap {
           flex: 1;
-          width: 84.7%;
+          overflow: hidden;
+          position: relative;
+        }
+        .tab-track {
+          display: flex;
+          height: 100%;
+          will-change: transform;
+          transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tab-track.no-transition {
+          transition: none;
+        }
+        .tab-panel {
+          min-width: 100%;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        .tab-panel-inner {
+          padding: 18px 16px;
+          max-width: 480px;
           margin: 0 auto;
-          transform: scale(1.18);
-          transform-origin: top center;
+          width: 100%;
+        }
+        .tab-panel-inner.content-centrado {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          min-height: 100%;
         }
         .content {
           padding: 18px 16px;
@@ -2434,26 +2494,50 @@ export default function App() {
 
       <div className="topbar-spacer" />
 
-      <div className="content-scale-wrap" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        <div className={`content ${tab === "inicio" ? "content-centrado" : ""}`}>
-          {tab === "goteo" ? <Goteo /> : tab === "pafi" ? <PaFi /> : tab === "inicio" ? <Inicio tema={tema} toggleTheme={toggleTheme} setTab={setTab} /> : <Diluciones />}
+      <div
+        className="content-scale-wrap"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="tab-track" ref={trackRef}>
+          <div className="tab-panel">
+            <div className="tab-panel-inner content-centrado">
+              <Inicio tema={tema} toggleTheme={toggleTheme} setTab={cambiarTab} />
+            </div>
+          </div>
+          <div className="tab-panel">
+            <div className="tab-panel-inner">
+              <Diluciones />
+            </div>
+          </div>
+          <div className="tab-panel">
+            <div className="tab-panel-inner">
+              <Goteo />
+            </div>
+          </div>
+          <div className="tab-panel">
+            <div className="tab-panel-inner">
+              <PaFi />
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="tabbar">
-        <button className={`tab-btn ${tab === "inicio" ? "active" : ""}`} onClick={() => setTab("inicio")}>
+        <button className={`tab-btn ${tab === "inicio" ? "active" : ""}`} onClick={() => cambiarTab("inicio")}>
           <Home size={20} />
           Inicio
         </button>
-        <button className={`tab-btn ${tab === "diluciones" ? "active" : ""}`} onClick={() => setTab("diluciones")}>
+        <button className={`tab-btn ${tab === "diluciones" ? "active" : ""}`} onClick={() => cambiarTab("diluciones")}>
           <Activity size={20} />
           Diluciones
         </button>
-        <button className={`tab-btn ${tab === "goteo" ? "active" : ""}`} onClick={() => setTab("goteo")}>
+        <button className={`tab-btn ${tab === "goteo" ? "active" : ""}`} onClick={() => cambiarTab("goteo")}>
           <Droplet size={20} />
           Goteo
         </button>
-        <button className={`tab-btn ${tab === "pafi" ? "active" : ""}`} onClick={() => setTab("pafi")}>
+        <button className={`tab-btn ${tab === "pafi" ? "active" : ""}`} onClick={() => cambiarTab("pafi")}>
           <Wind size={20} />
           PaFi
         </button>
