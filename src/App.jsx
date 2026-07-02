@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home } from "lucide-react";
 
 // Escala global de la interfaz para el uso real en el teléfono (todo se veía
@@ -1331,6 +1331,18 @@ function Goteo() {
 
 const ORDEN_TABS = ["inicio", "diluciones", "goteo", "pafi"];
 
+// Versiones memoizadas de los paneles. Los 4 están siempre montados (para el
+// swipe), así que sin memo se re-renderizaban TODOS cada vez que App cambiaba
+// de estado (abrir teclado, cambiar de tab, etc.), causando el lag al tocar en
+// iPhone. Diluciones/Goteo/PaFi no reciben props => con memo no se re-renderizan
+// nunca por culpa del padre (su estado interno sigue funcionando igual). Inicio
+// solo se re-renderiza si cambia `tema` (sus callbacks van con useCallback).
+// No se toca nada de la lógica de cálculo: es puramente de renderizado.
+const InicioMemo = React.memo(Inicio);
+const DilucionesMemo = React.memo(Diluciones);
+const GoteoMemo = React.memo(Goteo);
+const PaFiMemo = React.memo(PaFi);
+
 export default function App() {
   const [tab, setTab] = useState("diluciones");
   const [scrolled, setScrolled] = useState(false);
@@ -1351,7 +1363,7 @@ export default function App() {
     }
   }, [tema]);
 
-  const toggleTheme = () => setTema((t) => (t === "dark" ? "light" : "dark"));
+  const toggleTheme = useCallback(() => setTema((t) => (t === "dark" ? "light" : "dark")), []);
   const esOscuro = tema === "dark";
 
   useEffect(() => {
@@ -1431,7 +1443,6 @@ export default function App() {
   const touchStartRef = useRef(null);
   const trackRef = useRef(null);
   const tabRef = useRef(tab);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   useEffect(() => { tabRef.current = tab; }, [tab]);
 
   // Al montar, posiciona el track sin animación en el tab inicial
@@ -1492,28 +1503,25 @@ export default function App() {
     if (dx < -50 && idx < ORDEN_TABS.length - 1) {
       const next = ORDEN_TABS[idx + 1];
       setTrack(getOffset(next), true);
-      setIsTransitioning(true);
-      setTimeout(() => { setTab(next); setIsTransitioning(false); }, 280);
+      setTimeout(() => setTab(next), 280);
     } else if (dx > 50 && idx > 0) {
       const prev = ORDEN_TABS[idx - 1];
       setTrack(getOffset(prev), true);
-      setIsTransitioning(true);
-      setTimeout(() => { setTab(prev); setIsTransitioning(false); }, 280);
+      setTimeout(() => setTab(prev), 280);
     } else {
       setTrack(getOffset(tabRef.current), true);
     }
   };
 
-  const cambiarTab = (nuevoTab) => {
+  const cambiarTab = useCallback((nuevoTab) => {
     const idxActual = ORDEN_TABS.indexOf(tabRef.current);
     const idxNuevo = ORDEN_TABS.indexOf(nuevoTab);
     if (idxNuevo === idxActual) return;
     showSeam();
     setTrack(getOffset(nuevoTab), true);
-    setIsTransitioning(true);
-    setTimeout(() => { setTab(nuevoTab); setIsTransitioning(false); }, 280);
+    setTimeout(() => setTab(nuevoTab), 280);
     hideSeam(320);
-  };
+  }, []);
 
   return (
     <div className="app-shell" data-theme={tema}>
@@ -2601,28 +2609,28 @@ export default function App() {
           <div className="tab-panel">
             <div className="tab-panel-scroll">
               <div className="tab-panel-inner content-centrado">
-                <Inicio tema={tema} toggleTheme={toggleTheme} setTab={cambiarTab} />
+                <InicioMemo tema={tema} toggleTheme={toggleTheme} setTab={cambiarTab} />
               </div>
             </div>
           </div>
           <div className="tab-panel">
             <div className="tab-panel-scroll">
               <div className="tab-panel-inner">
-                <Diluciones />
+                <DilucionesMemo />
               </div>
             </div>
           </div>
           <div className="tab-panel">
             <div className="tab-panel-scroll">
               <div className="tab-panel-inner">
-                <Goteo />
+                <GoteoMemo />
               </div>
             </div>
           </div>
           <div className="tab-panel">
             <div className="tab-panel-scroll">
               <div className="tab-panel-inner">
-                <PaFi />
+                <PaFiMemo />
               </div>
             </div>
           </div>
