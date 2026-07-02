@@ -5,7 +5,7 @@ import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, 
 // muy chico en el PWA instalado). Subí o bajá este número para agrandar o
 // achicar TODA la app de forma uniforme. 1.18 = +18%. Ver el useEffect de
 // escalado de viewport más abajo para el detalle de cómo se aplica.
-const ESCALA_UI = 1.14;
+const ESCALA_UI = 1.08;
 
 const DROGAS = [
   "Adrenalina",
