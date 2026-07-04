@@ -301,6 +301,7 @@ const DOSIS_REFERENCIA = {
     presentaciones: ["Ampolla/concentrado 20 UI/1 ml (ej. Empressin)."],
     unidadPreparacion: "UI",
     ampolla: { cantidad: 20, ml: 1 },
+    unidadRef: "UI/min",
     techoValor: 0.04,
     texto: "Ficha técnica AEMPS y ensayo VASST: en shock séptico se usa a dosis baja y fija, 0,01-0,03 UI/min, sin necesidad de titular según PAM como los demás vasopresores (a diferencia de noradrenalina/adrenalina). Dosis por encima de este rango no han mostrado mayor beneficio hemodinámico y sí más riesgo de isquemia. Uso exclusivo por vía central.",
     escenarios: [
@@ -473,7 +474,7 @@ function Inicio({ tema, toggleTheme, setTab }) {
         <div className="inicio-seccion-titulo">ACCESOS DIRECTOS</div>
         <button type="button" className="inicio-row" onClick={() => cambiarTab("diluciones")}>
           <span className="inicio-row-icon">💉</span>
-          <span className="inicio-row-label">Diluciones Medicamentosas</span>
+          <span className="inicio-row-label">Calculadora de Diluciones</span>
           <ChevronDown size={16} className="inicio-row-chevron" />
         </button>
         <button type="button" className="inicio-row" onClick={() => cambiarTab("goteo")}>
@@ -483,7 +484,7 @@ function Inicio({ tema, toggleTheme, setTab }) {
         </button>
         <button type="button" className="inicio-row" onClick={() => cambiarTab("pafi")}>
           <span className="inicio-row-icon">🫁</span>
-          <span className="inicio-row-label">Relación PaFi (Berlín 2012)</span>
+          <span className="inicio-row-label">Calculadora PAFI (Berlín 2012)</span>
           <ChevronDown size={16} className="inicio-row-chevron" />
         </button>
       </div>
@@ -895,7 +896,26 @@ function Diluciones() {
     const peso = necesitaPeso ? resultado.pesoUsado : null;
 
     if (esUI) {
-      return null; // ninguna droga en UI tiene unidadRef definida actualmente
+      // Solo entran acá las drogas UI que además tienen un unidadRef propio
+      // definido (hoy: Vasopresina, con su rango fijo 0,01-0,03 UI/min según
+      // AEMPS/VASST). Insulina y Heparina deliberadamente NO tienen
+      // unidadRef -> ya cortaron en el chequeo de arriba (!ref.unidadRef) y
+      // nunca llegan a este punto, así que siguen sin techo fijo, como
+      // corresponde: se titulan contra laboratorio (glucemia, KPTT), no
+      // contra un límite farmacológico absoluto.
+      const uiPorHora = resultado.uiPorHora;
+      if (uiPorHora == null) return null;
+      switch (ref.unidadRef) {
+        case "UI/min":
+          return { valor: uiPorHora / 60, unidad: "UI/min" };
+        case "UI/h":
+          return { valor: uiPorHora, unidad: "UI/h" };
+        case "UI/kg/h":
+          if (!peso || peso <= 0) return null;
+          return { valor: uiPorHora / peso, unidad: "UI/kg/h" };
+        default:
+          return null;
+      }
     }
 
     const mcgPorMin = resultado.mcgPorMin;
@@ -1153,6 +1173,25 @@ function Diluciones() {
               );
             })()}
           </div>
+
+          {(() => {
+            // Faltaba esta rama: la alerta de sobredosis de acá abajo ya
+            // existía, pero nunca se agregó su contraparte positiva. Reusa
+            // exactamente la misma comparación (mismo totalDiario, mismo
+            // techo), solo con la condición invertida — no es un cálculo
+            // nuevo, es la mitad que faltaba del que ya estaba.
+            const dosis = num(dosisPorToma);
+            const techo = DOSIS_REFERENCIA[droga]?.techoValor;
+            if (!dosis || dosis <= 0 || !techo) return null;
+            const tomasPorDia = { unica: 1, "cada-6h": 4, "cada-8h": 3, "cada-12h": 2, "cada-24h": 1 }[frecuencia];
+            const totalDiario = dosis * tomasPorDia;
+            if (totalDiario > techo) return null;
+            return (
+              <div className="aviso-rango-ok">
+                ✓ Dentro de valores recomendados
+              </div>
+            );
+          })()}
 
           {(() => {
             const dosis = num(dosisPorToma);
