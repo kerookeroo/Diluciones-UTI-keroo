@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home } from "lucide-react";
+import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home, Scale, X } from "lucide-react";
 
 // Escala global de la interfaz para el uso real en el teléfono (todo se veía
 // muy chico en el PWA instalado). Subí o bajá este número para agrandar o
@@ -472,19 +472,24 @@ function Inicio({ tema, toggleTheme, setTab }) {
 
       <div className="inicio-seccion">
         <div className="inicio-seccion-titulo">ACCESOS DIRECTOS</div>
-        <button type="button" className="inicio-row" onClick={() => cambiarTab("diluciones")}>
+        <button type="button" className="inicio-row" onClick={() => setTab("diluciones")}>
           <span className="inicio-row-icon">💉</span>
           <span className="inicio-row-label">Calculadora de Diluciones</span>
           <ChevronDown size={16} className="inicio-row-chevron" />
         </button>
-        <button type="button" className="inicio-row" onClick={() => cambiarTab("goteo")}>
-          <span className="inicio-row-icon">💧</span>
-          <span className="inicio-row-label">Cálculo de Goteo / Tiempo</span>
+        <button type="button" className="inicio-row" onClick={() => setTab("balance")}>
+          <span className="inicio-row-icon">⚖️</span>
+          <span className="inicio-row-label">Balance de Ingresos y Egresos</span>
           <ChevronDown size={16} className="inicio-row-chevron" />
         </button>
-        <button type="button" className="inicio-row" onClick={() => cambiarTab("pafi")}>
+        <button type="button" className="inicio-row" onClick={() => setTab("pafi")}>
           <span className="inicio-row-icon">🫁</span>
           <span className="inicio-row-label">Calculadora PAFI (Berlín 2012)</span>
+          <ChevronDown size={16} className="inicio-row-chevron" />
+        </button>
+        <button type="button" className="inicio-row" onClick={() => setTab("goteo")}>
+          <span className="inicio-row-icon">💧</span>
+          <span className="inicio-row-label">Cálculo de Goteo / Tiempo</span>
           <ChevronDown size={16} className="inicio-row-chevron" />
         </button>
       </div>
@@ -1551,7 +1556,140 @@ function Goteo() {
   );
 }
 
-const ORDEN_TABS = ["inicio", "diluciones", "goteo", "pafi"];
+// Calculadora de Balance de Ingresos y Egresos. A pedido explícito: sin
+// etiquetas ni categorías, solo el número y a qué columna va (Ingreso o
+// Egreso) — la idea es cargar rápido durante el turno, no documentar qué
+// era cada volumen. Aritmética pura (suma/resta); la app no interpreta ni
+// opina si el balance resultante es clínicamente adecuado, eso queda a
+// criterio del profesional.
+function Balance() {
+  const [ingresos, setIngresos] = useState([]); // [{ id, valor }]
+  const [egresos, setEgresos] = useState([]);
+  const [tipo, setTipo] = useState("ingreso"); // "ingreso" | "egreso"
+  const [valor, setValor] = useState("");
+  const idRef = useRef(0);
+
+  const agregar = () => {
+    const n = num(valor);
+    if (!n || n <= 0) return;
+    const item = { id: idRef.current++, valor: n };
+    if (tipo === "ingreso") setIngresos((arr) => [...arr, item]);
+    else setEgresos((arr) => [...arr, item]);
+    setValor("");
+  };
+
+  const eliminar = (lista, id) => {
+    if (lista === "ingreso") setIngresos((arr) => arr.filter((it) => it.id !== id));
+    else setEgresos((arr) => arr.filter((it) => it.id !== id));
+  };
+
+  const reiniciar = () => {
+    setIngresos([]);
+    setEgresos([]);
+  };
+
+  // Suma con acumulador redondeado a 2 decimales en cada paso para evitar
+  // que errores de redondeo flotante de JS (ej. 0.1 + 0.2) se acumulen a lo
+  // largo de una lista larga de valores durante un turno de 12h.
+  const sumar = (lista) => lista.reduce((acc, it) => Math.round((acc + it.valor) * 100) / 100, 0);
+
+  const totalIngresos = useMemo(() => sumar(ingresos), [ingresos]);
+  const totalEgresos = useMemo(() => sumar(egresos), [egresos]);
+  const balance = Math.round((totalIngresos - totalEgresos) * 100) / 100;
+
+  return (
+    <div className="panel">
+      <div className="section-title">¿Qué querés cargar?</div>
+      <div className="balance-toggle-row">
+        <div className="mode-tabs">
+          <button className={`mode-tab ${tipo === "ingreso" ? "active" : ""}`} onClick={() => setTipo("ingreso")}>
+            Ingreso
+          </button>
+          <button className={`mode-tab ${tipo === "egreso" ? "active" : ""}`} onClick={() => setTipo("egreso")}>
+            Egreso
+          </button>
+        </div>
+        {(ingresos.length > 0 || egresos.length > 0) && (
+          <button type="button" className="balance-reiniciar-btn" onClick={reiniciar}>
+            <RotateCcw size={14} /> Reiniciar
+          </button>
+        )}
+      </div>
+
+      <div className="panel-row two-col balance-columnas">
+        <div className="balance-columna">
+          <div className="balance-columna-titulo balance-columna-titulo-ingreso">INGRESOS</div>
+          {ingresos.length === 0 ? (
+            <div className="balance-vacio">Sin ingresos cargados.</div>
+          ) : (
+            <div className="balance-lista">
+              {ingresos.map((it) => (
+                <div className="balance-item" key={it.id}>
+                  <span>{fmtDosis(it.valor, 2)} ml</span>
+                  <button type="button" className="balance-item-borrar" onClick={() => eliminar("ingreso", it.id)} aria-label="Quitar">
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="balance-subtotal">Subtotal: {fmtDosis(totalIngresos, 2)} ml</div>
+        </div>
+
+        <div className="balance-columna">
+          <div className="balance-columna-titulo balance-columna-titulo-egreso">EGRESOS</div>
+          {egresos.length === 0 ? (
+            <div className="balance-vacio">Sin egresos cargados.</div>
+          ) : (
+            <div className="balance-lista">
+              {egresos.map((it) => (
+                <div className="balance-item" key={it.id}>
+                  <span>{fmtDosis(it.valor, 2)} ml</span>
+                  <button type="button" className="balance-item-borrar" onClick={() => eliminar("egreso", it.id)} aria-label="Quitar">
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="balance-subtotal">Subtotal: {fmtDosis(totalEgresos, 2)} ml</div>
+        </div>
+      </div>
+
+      <div className="panel-row balance-agregar-row">
+        <Field
+          label={tipo === "ingreso" ? "Volumen a ingresar" : "Volumen a egresar"}
+          unit="ml"
+          value={valor}
+          onChange={setValor}
+          placeholder="ej: 500"
+        />
+        <button
+          type="button"
+          className="balance-agregar-btn"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={agregar}
+        >
+          Agregar
+        </button>
+      </div>
+
+      <div className="result-block">
+        <div className="result-main">
+          <span className="result-main-value">{balance > 0 ? "+" : ""}{fmtDosis(balance, 2)}</span>
+          <span className="result-main-unit">ml balance</span>
+        </div>
+      </div>
+
+      <div className="disclaimer">
+        <AlertCircle size={13} />
+        <span>Esta calculadora solo suma y resta los volúmenes cargados. No estima pérdidas insensibles ni evalúa si el balance resultante es adecuado para el paciente: esa interpretación queda a criterio clínico.</span>
+      </div>
+    </div>
+  );
+}
+
+const ORDEN_TABS = ["inicio", "diluciones", "balance", "pafi", "goteo"];
 
 // Versiones memoizadas de los paneles. Los 4 están siempre montados (para el
 // swipe), así que sin memo se re-renderizaban TODOS cada vez que App cambiaba
@@ -1564,9 +1702,10 @@ const InicioMemo = React.memo(Inicio);
 const DilucionesMemo = React.memo(Diluciones);
 const GoteoMemo = React.memo(Goteo);
 const PaFiMemo = React.memo(PaFi);
+const BalanceMemo = React.memo(Balance);
 
 export default function App() {
-  const [tab, setTab] = useState("diluciones");
+  const [tab, setTab] = useState("inicio");
   const [scrolled, setScrolled] = useState(false);
   const [tema, setTema] = useState(() => {
     try {
@@ -2624,6 +2763,107 @@ export default function App() {
           line-height: 1.4;
         }
         .disclaimer svg { flex-shrink: 0; margin-top: 1px; }
+        .balance-agregar-row {
+          display: flex;
+          align-items: flex-end;
+          gap: 10px;
+        }
+        .balance-agregar-row .field { flex: 1; }
+        .balance-agregar-btn {
+          background: var(--accent-green);
+          color: var(--bg-app);
+          border: none;
+          border-radius: 12px;
+          padding: 0 20px;
+          height: 52px;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+          white-space: nowrap;
+          touch-action: manipulation;
+        }
+        .balance-columnas { gap: 12px; }
+        .balance-columna {
+          background: var(--bg-panel-alt);
+          border: 1px solid var(--border-panel);
+          border-radius: 14px;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          min-height: 140px;
+        }
+        .balance-columna-titulo {
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.06em;
+          margin-bottom: 10px;
+        }
+        .balance-columna-titulo-ingreso { color: var(--accent-green); }
+        .balance-columna-titulo-egreso { color: var(--accent-orange); }
+        .balance-vacio {
+          font-size: 12.5px;
+          color: var(--text-secondary);
+          flex: 1;
+        }
+        .balance-lista {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          flex: 1;
+        }
+        .balance-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: var(--bg-panel);
+          border-radius: 8px;
+          padding: 7px 10px;
+          font-size: 13.5px;
+          font-weight: 600;
+          color: var(--text-primary);
+          font-variant-numeric: tabular-nums;
+        }
+        .balance-item-borrar {
+          background: transparent;
+          border: none;
+          color: var(--text-secondary);
+          padding: 2px;
+          display: flex;
+          cursor: pointer;
+          touch-action: manipulation;
+        }
+        .balance-subtotal {
+          margin-top: 10px;
+          padding-top: 10px;
+          border-top: 1px solid var(--border-panel);
+          font-size: 12.5px;
+          font-weight: 700;
+          color: var(--text-primary);
+          font-variant-numeric: tabular-nums;
+        }
+        .balance-toggle-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+        }
+        .balance-toggle-row .mode-tabs { margin-bottom: 0; }
+        .balance-reiniciar-btn {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          flex-shrink: 0;
+          background: transparent;
+          border: 1px solid var(--border-panel);
+          color: var(--text-secondary);
+          border-radius: 20px;
+          padding: 9px 12px;
+          font-size: 12px;
+          font-weight: 600;
+          white-space: nowrap;
+          cursor: pointer;
+          touch-action: manipulation;
+        }
         .info-note {
           background: var(--box-green-bg);
           border: 1px solid var(--box-green-border);
@@ -2851,7 +3091,7 @@ export default function App() {
           <div className="tab-panel">
             <div className="tab-panel-scroll">
               <div className="tab-panel-inner">
-                <GoteoMemo />
+                <BalanceMemo />
               </div>
             </div>
           </div>
@@ -2859,6 +3099,13 @@ export default function App() {
             <div className="tab-panel-scroll">
               <div className="tab-panel-inner">
                 <PaFiMemo />
+              </div>
+            </div>
+          </div>
+          <div className="tab-panel">
+            <div className="tab-panel-scroll">
+              <div className="tab-panel-inner">
+                <GoteoMemo />
               </div>
             </div>
           </div>
@@ -2874,13 +3121,17 @@ export default function App() {
           <Activity size={20} />
           Diluciones
         </button>
-        <button className={`tab-btn ${tab === "goteo" ? "active" : ""}`} onClick={() => cambiarTab("goteo")}>
-          <Droplet size={20} />
-          Goteo
+        <button className={`tab-btn ${tab === "balance" ? "active" : ""}`} onClick={() => cambiarTab("balance")}>
+          <Scale size={20} />
+          Balance
         </button>
         <button className={`tab-btn ${tab === "pafi" ? "active" : ""}`} onClick={() => cambiarTab("pafi")}>
           <Wind size={20} />
           PaFi
+        </button>
+        <button className={`tab-btn ${tab === "goteo" ? "active" : ""}`} onClick={() => cambiarTab("goteo")}>
+          <Droplet size={20} />
+          Goteo
         </button>
       </div>
     </div>
