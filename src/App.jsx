@@ -1667,6 +1667,12 @@ export default function App() {
           flex-direction: column;
           padding-bottom: 90px;
           position: relative;
+          /* Elimina el retardo de ~300ms que iOS Safari agrega en cada tap
+             esperando un posible doble-tap-para-zoom (reintroducido al usar un
+             viewport de ancho fijo para el escalado). 'manipulation' desactiva
+             solo el doble-tap-zoom; el pinch-zoom, el scroll y el swipe siguen
+             funcionando. Aplicado en el ancestro, cubre inputs, botones y tabs. */
+          touch-action: manipulation;
         }
         .topbar {
           padding: 28px 20px 18px;
