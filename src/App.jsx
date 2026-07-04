@@ -11,15 +11,18 @@ const DROGAS = [
   "Adrenalina",
   "Amiodarona",
   "Atracurio",
+  "Dexmedetomidina",
   "Diclofenac",
   "Dobutamina",
   "Dopamina",
+  "Fenilefrina",
   "Fentanilo",
   "Furosemida",
   "Haloperidol",
   "Heparina sódica",
   "Hidrocortisona",
   "Insulina corriente",
+  "Ketamina",
   "Ketorolac",
   "Lidocaína",
   "Midazolam",
@@ -28,14 +31,16 @@ const DROGAS = [
   "Nitroprusiato",
   "Noradrenalina",
   "Propofol",
+  "Remifentanilo",
   "Tramadol",
+  "Vasopresina",
   "Otra / sin nombre",
 ];
 
 // Drogas vasoactivas de muy alto riesgo: un error de dosis puede comprometer
 // la vida del paciente rápidamente. Se resaltan en rojo en el selector.
-const DROGAS_ALTO_RIESGO = ["Adrenalina", "Noradrenalina", "Dobutamina", "Dopamina", "Nitroglicerina", "Nitroprusiato", "Amiodarona"];
-const DROGAS_OPIOIDES = ["Morfina", "Fentanilo", "Tramadol"];
+const DROGAS_ALTO_RIESGO = ["Adrenalina", "Noradrenalina", "Dobutamina", "Dopamina", "Nitroglicerina", "Nitroprusiato", "Amiodarona", "Vasopresina", "Fenilefrina"];
+const DROGAS_OPIOIDES = ["Morfina", "Fentanilo", "Tramadol", "Remifentanilo"];
 const DROGAS_BLOQUEANTES_NM = ["Atracurio"];
 
 // Referencias de dosis máxima habitual, basadas en ficha técnica AEMPS y
@@ -46,7 +51,7 @@ const DOSIS_REFERENCIA = {
     techo: false,
     grupo: "Catecolamina · Vasopresor",
     grupoRojo: true,
-    presentaciones: ["Ampolla 4 mg/4 ml (1 mg/ml)."],
+    presentaciones: ["Ampolla 4 mg/4 ml."],
     ampolla: { cantidad: 4, ml: 4 },
     unidadRef: "mcg/kg/min",
     umbralAlerta: 3,
@@ -87,7 +92,7 @@ const DOSIS_REFERENCIA = {
     techo: true,
     grupo: "Inotrópico simpaticomimético",
     grupoRojo: true,
-    presentaciones: ["Ampolla 250 mg/20 ml (12,5 mg/ml)."],
+    presentaciones: ["Ampolla 250 mg/20 ml."],
     ampolla: { cantidad: 250, ml: 20 },
     unidadRef: "mcg/kg/min",
     techoValor: 20,
@@ -101,7 +106,7 @@ const DOSIS_REFERENCIA = {
     techo: true,
     grupo: "Vasodilatador periférico",
     grupoRojo: true,
-    presentaciones: ["Ampolla 25 mg/5 ml (5 mg/ml)."],
+    presentaciones: ["Ampolla 25 mg/5 ml."],
     ampolla: { cantidad: 25, ml: 5 },
     unidadRef: "mcg/min",
     techoValor: 400,
@@ -128,7 +133,7 @@ const DOSIS_REFERENCIA = {
   "Midazolam": {
     techo: false,
     grupo: "Benzodiacepina · Sedante-Hipnótico · Amnésico · Ansiolítico · Anticonvulsivante",
-    presentaciones: ["Ampolla 15 mg/3 ml (5 mg/ml)."],
+    presentaciones: ["Ampolla 15 mg/3 ml."],
     ampolla: { cantidad: 15, ml: 3 },
     unidadRef: "mg/kg/h",
     umbralAlerta: 3,
@@ -149,7 +154,7 @@ const DOSIS_REFERENCIA = {
     techo: false,
     grupo: "Opioide fuerte",
     grupoVioleta: true,
-    presentaciones: ["Ampolla 250 mcg/5 ml (50 mcg/ml)."],
+    presentaciones: ["Ampolla 250 mcg/5 ml."],
     unidadPreparacion: "mcg",
     ampolla: { cantidad: 250, ml: 5 },
     unidadRef: "mcg/kg/h",
@@ -160,7 +165,7 @@ const DOSIS_REFERENCIA = {
   "Insulina corriente": {
     techo: false,
     grupo: "Hipoglucemiante · Hormona",
-    presentaciones: ["Frasco-ampolla 10 ml con 100 UI/ml (1000 UI totales)."],
+    presentaciones: ["Frasco-ampolla 1000 UI/10 ml."],
     unidadPreparacion: "UI",
     ampolla: { cantidad: 100, ml: 1 },
     texto: "Sin techo fijo: se titula contra glucemias horarias según protocolo institucional (ej. esquema tipo Yale). El bolo y la velocidad inicial dependen del valor de glucemia.",
@@ -177,7 +182,7 @@ const DOSIS_REFERENCIA = {
   "Propofol": {
     techo: true,
     grupo: "Hipnótico · Sedante",
-    presentaciones: ["Frasco 20 ml (200 mg) — 10 mg/ml.", "Frasco 50 ml (500 mg) — 10 mg/ml."],
+    presentaciones: ["Frasco 200 mg/20 ml.", "Frasco 500 mg/50 ml."],
     ampolla: { cantidad: 200, ml: 20 },
     unidadRef: "mg/kg/h",
     techoValor: 4,
@@ -186,7 +191,7 @@ const DOSIS_REFERENCIA = {
   "Atracurio": {
     techo: true,
     grupo: "Bloqueante neuromuscular",
-    presentaciones: ["Ampolla 50 mg/5 ml (10 mg/ml)."],
+    presentaciones: ["Ampolla 50 mg/5 ml."],
     ampolla: { cantidad: 50, ml: 5 },
     unidadRef: "mg/kg/h",
     techoValor: 0.78,
@@ -200,7 +205,12 @@ const DOSIS_REFERENCIA = {
     ampolla: { cantidad: 150, ml: 3 },
     unidadRef: "mg/día",
     techoValor: 1200,
-    texto: "Dosis máxima diaria: 1200 mg/24h. Mantenimiento habitual 10-20 mg/kg/24h (600-800 mg/día).",
+    texto: "Dosis máxima diaria: 1200 mg/24h. Mantenimiento habitual 10-20 mg/kg/24h (600-800 mg/día). Protocolo de infusión habitual (arritmia/FA): carga 150 mg IV en 10 min, seguida de infusión 1 mg/min durante 6h y luego 0,5 mg/min durante 18h.",
+    escenarios: [
+      { titulo: "Infusión rápida (primeras 6h)", items: ["1 mg/min (equivale a 60 mg/h)"] },
+      { titulo: "Infusión de mantenimiento (18h siguientes)", items: ["0,5 mg/min (equivale a 30 mg/h)"] },
+      { titulo: "Techo diario", items: ["Máximo 1200 mg/24h", "Mantenimiento habitual: 600-800 mg/día"] },
+    ],
   },
   "Haloperidol": {
     techo: true,
@@ -266,12 +276,130 @@ const DOSIS_REFERENCIA = {
   "Heparina sódica": {
     techo: false,
     grupo: "Anticoagulante",
-    presentaciones: ["Frasco-ampolla 5 ml con 5000 UI/ml (25.000 UI totales)."],
+    presentaciones: ["Frasco-ampolla 25.000 UI/5 ml."],
     unidadPreparacion: "UI",
     ampolla: { cantidad: 25000, ml: 5 },
     texto: "No tiene un techo de UI/h fijo: se titula contra el KPTT del paciente, objetivo habitual 1,5-2 veces el valor basal. Esquema típico: bolo 80-100 UI/kg, mantenimiento 18 UI/kg/h, con ajuste según control de laboratorio.",
   },
+  "Fenilefrina": {
+    techo: true,
+    grupo: "Vasopresor alfa-1 puro",
+    grupoRojo: true,
+    presentaciones: ["Ampolla 10 mg/1 ml."],
+    ampolla: { cantidad: 10, ml: 1 },
+    unidadRef: "mcg/min",
+    techoValor: 180,
+    texto: "Ficha técnica AEMPS: perfusión continua inicial 25-50 mcg/min, rango efectivo habitual 25-100 mcg/min, titulando según PA sistólica. Vademecum cita una velocidad máxima orientativa de 180 mcg/min, reduciendo según respuesta a 30-60 mcg/min. No es de primera línea en shock séptico (SSC prioriza noradrenalina); su uso principal es como rescate cuando hay arritmias asociadas a noradrenalina o gasto cardíaco alto con hipotensión.",
+    escenarios: [
+      { titulo: "Infusión continua", items: ["Inicial: 25-50 mcg/min", "Habitual: 25-100 mcg/min", "Máximo orientativo: 180 mcg/min"] },
+    ],
+  },
+  "Vasopresina": {
+    techo: true,
+    grupo: "Vasopresor · Hormona antidiurética",
+    grupoRojo: true,
+    presentaciones: ["Ampolla/concentrado 20 UI/1 ml (ej. Empressin)."],
+    unidadPreparacion: "UI",
+    ampolla: { cantidad: 20, ml: 1 },
+    techoValor: 0.04,
+    texto: "Ficha técnica AEMPS y ensayo VASST: en shock séptico se usa a dosis baja y fija, 0,01-0,03 UI/min, sin necesidad de titular según PAM como los demás vasopresores (a diferencia de noradrenalina/adrenalina). Dosis por encima de este rango no han mostrado mayor beneficio hemodinámico y sí más riesgo de isquemia. Uso exclusivo por vía central.",
+    escenarios: [
+      { titulo: "Infusión continua (shock séptico)", items: ["Dosis fija habitual: 0,01-0,03 UI/min", "No se titula por PAM como los demás vasopresores"] },
+    ],
+  },
+  "Remifentanilo": {
+    techo: false,
+    grupo: "Opioide fuerte de acción ultracorta",
+    grupoVioleta: true,
+    presentaciones: ["Vial 2 mg polvo para reconstituir (concentrado para perfusión)."],
+    ampolla: { cantidad: 2, ml: 1 },
+    unidadRef: "mcg/kg/min",
+    umbralAlerta: 0.2,
+    texto: "Ficha técnica AEMPS (sedoanalgesia en UCI con ventilación mecánica): velocidad inicial 0,1-0,15 mcg/kg/min, ajustando en incrementos de 0,025 mcg/kg/min cada 5 min como mínimo. Si se alcanza 0,2 mcg/kg/min sin sedación adecuada, la ficha técnica recomienda sumar un sedante en vez de seguir escalando. Su vida media ultracorta (5-10 min) hace que no quede actividad opioide residual al suspenderlo.",
+    escenarios: [
+      { titulo: "Infusión continua (UCI, ventilación mecánica)", items: ["Inicial: 0,1-0,15 mcg/kg/min", "Ajuste: incrementos de 0,025 mcg/kg/min cada ≥5 min", "Umbral: 0,2 mcg/kg/min (agregar sedante en vez de seguir escalando)"] },
+    ],
+  },
+  "Dexmedetomidina": {
+    techo: true,
+    grupo: "Sedante alfa-2 agonista",
+    presentaciones: ["Ampolla/vial 200 mcg/2 ml."],
+    unidadPreparacion: "mcg",
+    ampolla: { cantidad: 200, ml: 2 },
+    unidadRef: "mcg/kg/h",
+    techoValor: 1.4,
+    texto: "Ficha técnica AEMPS (sedación UCI, RASS 0 a -3): velocidad inicial 0,7 mcg/kg/h, ajuste dentro del rango 0,2-1,4 mcg/kg/h según respuesta. Dosis máxima formal: 1,4 mcg/kg/h; si no se logra sedación adecuada a dosis máxima, cambiar a otro sedante. No se recomienda dosis de carga en UCI (se asocia a más efectos adversos).",
+    escenarios: [
+      { titulo: "Infusión continua", items: ["Inicial: 0,7 mcg/kg/h", "Rango de ajuste: 0,2-1,4 mcg/kg/h", "Máximo: 1,4 mcg/kg/h"] },
+    ],
+  },
+  "Ketamina": {
+    techo: true,
+    grupo: "Anestésico disociativo · Analgésico adyuvante",
+    presentaciones: ["Ampolla 500 mg/10 ml."],
+    ampolla: { cantidad: 500, ml: 10 },
+    unidadRef: "mg/kg/h",
+    techoValor: 0.4,
+    texto: "Como analgésico adyuvante en UCI de adultos (revisión Clínica Las Condes): dosis inicial 0,1-0,5 mg/kg IV, seguida de infusión continua 0,05-0,4 mg/kg/h.",
+    notaExtraordinaria: "En protocolos de sedoanalgesia combinada con propofol (uso más frecuente en series pediátricas/UCIP), se han descrito dosis de inicio de 1 mg/kg/h con máximos de hasta 1,5-2 mg/kg/h bajo monitorización estrecha. No es la dosis habitual del uso analgésico adyuvante en adultos: requiere protocolo específico y justificación clínica.",
+    escenarios: [
+      { titulo: "Uso analgésico adyuvante (adultos)", items: ["Inicial: 0,1-0,5 mg/kg en bolo", "Mantenimiento: 0,05-0,4 mg/kg/h"] },
+    ],
+  },
 };
+
+// Unidades de dosis seleccionables por droga en el calculador de infusión
+// continua (Diluciones). El primer elemento de cada array es el default que
+// se fija automáticamente al elegir la droga (cambiarDroga). El resto son
+// alternativas válidas que el usuario puede elegir manualmente (ej. algunas
+// instituciones prescriben Amiodarona en mg/h en vez de mg/min).
+// "gamas" es el código interno para mcg/kg/min (nombre clínico coloquial).
+// Drogas que no aparecen acá (bolo/frecuencia como Hidrocortisona, o las que
+// usan tieneAmbosModos) resuelven su propio flujo por fuera de este mapa.
+const UNIDADES_POR_DROGA = {
+  "Noradrenalina": ["gamas"],
+  "Adrenalina": ["gamas"],
+  "Dobutamina": ["gamas"],
+  "Dopamina": ["gamas"],
+  "Nitroprusiato": ["gamas"],
+  "Nitroglicerina": ["mcg/min"],
+  "Fenilefrina": ["mcg/min", "gamas"],
+  "Vasopresina": ["UI/min", "UI/h"],
+  "Amiodarona": ["mg/min", "mg/h"],
+  "Lidocaína": ["mg/min"],
+  "Morfina": ["mg/h"],
+  "Fentanilo": ["mcg/kg/h", "mcg/h"],
+  "Remifentanilo": ["gamas"],
+  "Midazolam": ["mg/kg/h", "mg/h"],
+  "Propofol": ["mg/kg/h"],
+  "Dexmedetomidina": ["mcg/kg/h"],
+  "Ketamina": ["mg/kg/h"],
+  "Atracurio": ["mg/kg/h"],
+  "Insulina corriente": ["UI/h"],
+  "Heparina sódica": ["UI/kg/h", "UI/h"],
+  // Bolo por defecto (modoAdmin="bolo"); si el usuario pasa a "Infusión",
+  // mg/h es la unidad con la que se describe su uso continuo en la práctica.
+  "Diclofenac": ["mg/h"],
+  "Ketorolac": ["mg/h"],
+  "Tramadol": ["mg/h"],
+};
+
+// Etiquetas legibles para cada código de unidad en el selector.
+const ETIQUETA_UNIDAD = {
+  "gamas": "Gamas (mcg/kg/min)",
+  "mcg/min": "mcg/min",
+  "mcg/h": "mcg/h",
+  "mg/h": "mg/h",
+  "mg/min": "mg/min",
+  "mg/kg/h": "mg/kg/h",
+  "mcg/kg/h": "mcg/kg/h",
+  "UI/h": "UI/h",
+  "UI/kg/h": "UI/kg/h",
+  "UI/min": "UI/min",
+};
+
+// Unidades que son "por kg": obligan a pedir y usar el peso del paciente.
+const UNIDADES_QUE_REQUIEREN_PESO = ["gamas", "UI/kg/h", "mg/kg/h", "mcg/kg/h"];
 
 const FACTOR_GOTERO = {
   macro: 20, // gotas/ml estándar macrogotero
@@ -532,7 +660,7 @@ function Diluciones() {
   const [mlhCargado, setMlhCargado] = useState("");
   const [unidadDosis, setUnidadDosis] = useState("gamas");
 
-  const necesitaPeso = unidadDosis === "gamas" || unidadDosis === "UI/kg/h";
+  const necesitaPeso = UNIDADES_QUE_REQUIEREN_PESO.includes(unidadDosis);
   const unidadPrep = DOSIS_REFERENCIA[droga]?.unidadPreparacion || "mg";
   const esUI = unidadPrep === "UI";
   const unidadRefDroga = DOSIS_REFERENCIA[droga]?.unidadRef;
@@ -571,25 +699,39 @@ function Diluciones() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sinDiluir, numAmpollas, droga]);
 
-  // Cuando cambia la droga a/desde una que se dosifica en UI, la unidad de
-  // dosis seleccionada puede dejar de tener sentido (ej. "gamas" para
-  // heparina). Se reinicia a un valor válido para el nuevo contexto.
-  useEffect(() => {
-    if (esUI && (unidadDosis === "gamas" || unidadDosis === "mcg/min" || unidadDosis === "mg/h")) {
-      setUnidadDosis("UI/h");
-    }
-    if (!esUI && (unidadDosis === "UI/h" || unidadDosis === "UI/kg/h")) {
-      setUnidadDosis("gamas");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [esUI]);
+  // Nota: antes había un useEffect([esUI]) que reconciliaba unidadDosis al
+  // cambiar entre drogas UI y no-UI, pero solo cubría esa transición (dejaba
+  // una unidad vieja "pegada" al cambiar entre dos drogas del mismo tipo,
+  // ej. Noradrenalina -> Dobutamina). Ahora cambiarDroga fija explícitamente
+  // la unidad correcta para CADA droga (ver UNIDADES_POR_DROGA), así que ese
+  // efecto ya no hace falta y se retira.
 
   const resultado = useMemo(() => {
     const cantidad = num(dosisMg);
-    const vol = num(volumenMl);
+    const volSuero = num(volumenMl);
     const peso = num(pesoKg);
 
-    if (!cantidad || !vol || cantidad <= 0 || vol <= 0) return null;
+    if (!cantidad || !volSuero || cantidad <= 0 || volSuero <= 0) return null;
+
+    // Volumen real de la mezcla para calcular la concentración: el volumen
+    // de suero (diluyente) cargado, MÁS el volumen físico que agregan las
+    // propias ampollas del fármaco. En "sin diluir" no se suma (ahí
+    // volumenMl ya es el volumen puro de las ampollas, sin diluyente
+    // aparte, y sumarlo de nuevo lo contaría dos veces).
+    //
+    // Bug real encontrado y confirmado con Irvin (caso Atracurio: 500mg en
+    // "100 ml" de suero + 10 ampollas de 5 ml = 50 ml de droga -> el volumen
+    // real en la bolsa es 150 ml, no 100 ml). Antes el cálculo de ml/h
+    // usaba solo el volumen de suero tipeado, ignorando el volumen que
+    // agregan las ampollas -> concentración calculada más alta que la real
+    // -> ml/h resultante por debajo de lo necesario para la dosis indicada
+    // (con 0,786 mg/kg/h en 70kg: daba 11 ml/h en vez de los 16,5 ml/h
+    // correctos). El cartel "Volumen total diluido" que ya se mostraba en
+    // pantalla SÍ hacía esta cuenta bien; ahora el cálculo usa lo mismo.
+    const ampInfo = DOSIS_REFERENCIA[droga]?.ampolla;
+    const vol = (!sinDiluir && ampInfo)
+      ? volSuero + (cantidad / ampInfo.cantidad) * ampInfo.ml
+      : volSuero;
 
     // Concentración: para UI se trabaja directamente en UI/ml. Para el resto,
     // la preparación puede estar en mg o mcg, y la concentración interna
@@ -605,7 +747,7 @@ function Diluciones() {
         if (necesitaPeso && (!peso || peso <= 0)) {
           return { concentracionMcgMl: concentracion, mlPorHora: null, faltaPeso: true };
         }
-        const uiPorHora = unidadDosis === "UI/kg/h" ? dosis * peso : dosis;
+        const uiPorHora = unidadDosis === "UI/kg/h" ? dosis * peso : unidadDosis === "UI/min" ? dosis * 60 : dosis;
         const mlPorHora = uiPorHora / concentracion;
         return { concentracionMcgMl: concentracion, mlPorHora, uiPorHora, pesoUsado: peso };
       } else {
@@ -615,7 +757,7 @@ function Diluciones() {
           return { concentracionMcgMl: concentracion, dosisResultante: null, faltaPeso: true };
         }
         const uiPorHora = mlh * concentracion;
-        const dosisResultante = unidadDosis === "UI/kg/h" ? uiPorHora / peso : uiPorHora;
+        const dosisResultante = unidadDosis === "UI/kg/h" ? uiPorHora / peso : unidadDosis === "UI/min" ? uiPorHora / 60 : uiPorHora;
         return { concentracionMcgMl: concentracion, dosisResultante, uiPorHora, pesoUsado: peso };
       }
     }
@@ -634,6 +776,10 @@ function Diluciones() {
       if (unidadDosis === "gamas") mcgPorMin = dosis * peso;
       else if (unidadDosis === "mcg/min") mcgPorMin = dosis;
       else if (unidadDosis === "mg/h") mcgPorMin = (dosis * 1000) / 60;
+      else if (unidadDosis === "mg/kg/h") mcgPorMin = (dosis * peso * 1000) / 60;
+      else if (unidadDosis === "mcg/kg/h") mcgPorMin = (dosis * peso) / 60;
+      else if (unidadDosis === "mg/min") mcgPorMin = dosis * 1000;
+      else if (unidadDosis === "mcg/h") mcgPorMin = dosis / 60;
       else mcgPorMin = dosis;
 
       const mlPorHora = (mcgPorMin * 60) / concentracionMcgMl;
@@ -653,11 +799,15 @@ function Diluciones() {
       if (unidadDosis === "gamas") dosisResultante = mcgPorMin / peso;
       else if (unidadDosis === "mcg/min") dosisResultante = mcgPorMin;
       else if (unidadDosis === "mg/h") dosisResultante = (mcgPorMin * 60) / 1000;
+      else if (unidadDosis === "mg/kg/h") dosisResultante = (mcgPorMin * 60) / 1000 / peso;
+      else if (unidadDosis === "mcg/kg/h") dosisResultante = (mcgPorMin * 60) / peso;
+      else if (unidadDosis === "mg/min") dosisResultante = mcgPorMin / 1000;
+      else if (unidadDosis === "mcg/h") dosisResultante = mcgPorMin * 60;
       else dosisResultante = mcgPorMin;
 
       return { concentracionMcgMl, dosisResultante, mcgPorMin, pesoUsado: peso };
     }
-  }, [dosisMg, volumenMl, pesoKg, dosisPrescrita, mlhCargado, unidadDosis, direccion, necesitaPeso, unidadPrep, esUI]);
+  }, [dosisMg, volumenMl, pesoKg, dosisPrescrita, mlhCargado, unidadDosis, direccion, necesitaPeso, unidadPrep, esUI, droga, sinDiluir]);
 
   const reset = () => {
     setDosisMg("");
@@ -684,8 +834,25 @@ function Diluciones() {
     setNumAmpollas("");
     setDosisPorToma("");
     setModoAdmin("bolo");
-    if (!DOSIS_REFERENCIA[nuevaDroga]?.ampolla) {
+    // Antes se apagaba "sin diluir" solo si la droga nueva no tenía datos de
+    // ampolla (DOSIS_REFERENCIA[...].ampolla) — pero ese campo existe para casi
+    // todas las drogas (se usa también para el cartel de presentación), no solo
+    // para las 4 que admiten "sin diluir". Eso podía dejar el casillero marcado
+    // sin que el usuario lo tildara al volver a una droga de la lista. Ahora se
+    // apaga correctamente salvo que la droga nueva esté en DROGAS_SIN_DILUIR.
+    if (!DROGAS_SIN_DILUIR.includes(nuevaDroga)) {
       setSinDiluir(false);
+    }
+    // Auto-configuración al elegir droga: la app arranca directamente en
+    // "Dosis → ml/h" (el flujo real de uso: el médico/enfermero ya sabe qué
+    // dosis necesita el paciente y quiere el ml/h para cargar en la bomba),
+    // con la unidad de dosis correcta pre-seleccionada según la droga. Antes
+    // esto se reconciliaba a medias con un useEffect frágil que solo cubría
+    // la transición UI/no-UI; ahora queda resuelto acá, para cualquier droga.
+    setDireccion("dosis-a-mlh");
+    const unidadesDisponibles = UNIDADES_POR_DROGA[nuevaDroga];
+    if (unidadesDisponibles && unidadesDisponibles.length > 0) {
+      setUnidadDosis(unidadesDisponibles[0]);
     }
   };
 
@@ -730,6 +897,8 @@ function Diluciones() {
         return { valor: mcgPorMin, unidad: "mcg/min" };
       case "mg/min":
         return { valor: mcgPorMin / 1000, unidad: "mg/min" };
+      case "mg/h":
+        return { valor: (mcgPorMin * 60) / 1000, unidad: "mg/h" };
       case "mg/día":
         return { valor: (mcgPorMin * 60 * 24) / 1000, unidad: "mg/día" };
       default:
@@ -1001,27 +1170,23 @@ function Diluciones() {
 
           <div className="panel-row two-col">
             {direccion === "dosis-a-mlh" ? (
-              <Field label="Dosis prescrita" unit={unidadDosis === "gamas" ? "gamas" : unidadDosis} value={dosisPrescrita} onChange={setDosisPrescrita} placeholder="ej: 0.1" />
+              <Field label="Dosis requerida" unit={unidadDosis === "gamas" ? "gamas" : unidadDosis} value={dosisPrescrita} onChange={setDosisPrescrita} placeholder="ej: 0.1" />
             ) : (
               <Field label="Velocidad actual" unit="ml/h" value={mlhCargado} onChange={setMlhCargado} placeholder="ej: 12" />
             )}
 
             <label className="field">
-              <span className="field-label">Unidad de dosis</span>
+              <span className="field-label">
+                {direccion === "dosis-a-mlh" ? "Unidad de dosis requerida" : "Unidad del resultado"}
+              </span>
               <div className="select-wrap">
                 <select className="field-select" value={unidadDosis} onChange={(e) => setUnidadDosis(e.target.value)}>
-                  {esUI ? (
-                    <>
-                      <option value="UI/h">UI/h</option>
-                      <option value="UI/kg/h">UI/kg/h</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="mg/h">mg/h</option>
-                      <option value="gamas">Gamas (mcg/kg/min)</option>
-                      <option value="mcg/min">mcg/min</option>
-                    </>
-                  )}
+                  {(esUI
+                    ? UNIDADES_POR_DROGA[droga] || ["UI/h", "UI/kg/h"]
+                    : UNIDADES_POR_DROGA[droga] || ["mg/h", "gamas", "mcg/min"]
+                  ).map((u) => (
+                    <option key={u} value={u}>{ETIQUETA_UNIDAD[u] || u}</option>
+                  ))}
                 </select>
                 <ChevronDown size={16} className="select-chevron" />
               </div>
@@ -1111,7 +1276,7 @@ function Diluciones() {
         </>
       )}
 
-      {DOSIS_REFERENCIA[droga] && (usaFrecuencia ? num(dosisPorToma) > 0 : (resultado && !resultado.faltaPeso && (resultado.mlPorHora != null || resultado.dosisResultante != null))) && (
+      {DOSIS_REFERENCIA[droga] && (
         <div className="ref-dosis">
           <div className="ref-dosis-titulo">
             {DOSIS_REFERENCIA[droga].techo ? "Dosis máxima recomendada" : "Sobre el máximo de esta droga"}
@@ -1135,7 +1300,7 @@ function Diluciones() {
         </div>
       )}
 
-      {DOSIS_REFERENCIA[droga]?.notaExtraordinaria && resultado && !resultado.faltaPeso && (resultado.mlPorHora != null || resultado.dosisResultante != null) && (
+      {DOSIS_REFERENCIA[droga]?.notaExtraordinaria && (
         <div className="ref-dosis ref-dosis-extraordinaria">
           <div className="ref-dosis-titulo">Rango extraordinario (escenarios excepcionales)</div>
           <div className="ref-dosis-texto">{resaltarDosis(DOSIS_REFERENCIA[droga].notaExtraordinaria)}</div>
