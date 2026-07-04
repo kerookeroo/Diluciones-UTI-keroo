@@ -479,7 +479,7 @@ function Inicio({ tema, toggleTheme, setTab }) {
         </button>
         <button type="button" className="inicio-row" onClick={() => setTab("balance")}>
           <span className="inicio-row-icon">⚖️</span>
-          <span className="inicio-row-label">Balance de Ingresos y Egresos</span>
+          <span className="inicio-row-label">Calculadora Balance Hídrico</span>
           <ChevronDown size={16} className="inicio-row-chevron" />
         </button>
         <button type="button" className="inicio-row" onClick={() => setTab("pafi")}>
@@ -1599,7 +1599,7 @@ function Balance() {
 
   return (
     <div className="panel">
-      <div className="section-title">¿Qué querés cargar?</div>
+      <div className="section-title">¿Qué querés balancear?</div>
       <div className="balance-toggle-row">
         <div className="mode-tabs">
           <button className={`mode-tab ${tipo === "ingreso" ? "active" : ""}`} onClick={() => setTipo("ingreso")}>
@@ -1669,8 +1669,9 @@ function Balance() {
           className="balance-agregar-btn"
           onMouseDown={(e) => e.preventDefault()}
           onClick={agregar}
+          aria-label="Agregar volumen"
         >
-          Agregar
+          +
         </button>
       </div>
 
@@ -2774,12 +2775,13 @@ export default function App() {
           color: var(--bg-app);
           border: none;
           border-radius: 12px;
-          padding: 0 20px;
+          width: 52px;
           height: 52px;
-          font-size: 14px;
+          font-size: 26px;
           font-weight: 700;
+          line-height: 1;
           cursor: pointer;
-          white-space: nowrap;
+          flex-shrink: 0;
           touch-action: manipulation;
         }
         .balance-columnas { gap: 12px; }
@@ -2846,6 +2848,7 @@ export default function App() {
           align-items: center;
           justify-content: space-between;
           gap: 10px;
+          margin-bottom: 20px;
         }
         .balance-toggle-row .mode-tabs { margin-bottom: 0; }
         .balance-reiniciar-btn {
