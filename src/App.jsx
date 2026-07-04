@@ -856,6 +856,24 @@ function Diluciones() {
     }
   };
 
+  // Al cambiar el sentido del cálculo (ml/h<->Dosis), lleva el resultado que
+  // la app YA calculó al campo del otro modo, en vez de dejarlo vacío y
+  // obligar a retipear/recordar el número (pedido de Irvin, con capturas de
+  // ejemplo: Amiodarona 11 ml/h <-> 0,267 mg/min). No es un cambio de
+  // fórmula: usa el mismo valor que ya está en pantalla, solo evita perder
+  // la cuenta ya hecha al tocar el toggle. Si falta el peso (resultado
+  // null/faltaPeso), no hay nada que transferir y el campo queda como está.
+  const cambiarDireccion = (nuevaDireccion) => {
+    if (nuevaDireccion === direccion) return;
+    if (nuevaDireccion === "dosis-a-mlh" && resultado?.dosisResultante != null) {
+      setDosisPrescrita(fmtDosis(resultado.dosisResultante, 3));
+    } else if (nuevaDireccion === "mlh-a-dosis" && resultado?.mlPorHora != null) {
+      setMlhCargado(fmtDosis(resultado.mlPorHora, 2));
+    }
+    setDireccion(nuevaDireccion);
+  };
+
+
   const unidadCompleta = unidadDosis === "gamas" ? "gamas (mcg/kg/min)" : unidadDosis;
 
   // Traduce el valor interno de unidadDosis a la unidad "semántica" real,
@@ -1160,10 +1178,10 @@ function Diluciones() {
         <>
           <div className="section-title">¿Qué querés calcular?</div>
           <div className="mode-tabs">
-            <button className={`mode-tab ${direccion === "mlh-a-dosis" ? "active" : ""}`} onClick={() => setDireccion("mlh-a-dosis")}>
+            <button className={`mode-tab ${direccion === "mlh-a-dosis" ? "active" : ""}`} onClick={() => cambiarDireccion("mlh-a-dosis")}>
               ml/h → Dosis
             </button>
-            <button className={`mode-tab ${direccion === "dosis-a-mlh" ? "active" : ""}`} onClick={() => setDireccion("dosis-a-mlh")}>
+            <button className={`mode-tab ${direccion === "dosis-a-mlh" ? "active" : ""}`} onClick={() => cambiarDireccion("dosis-a-mlh")}>
               Dosis → ml/h
             </button>
           </div>
