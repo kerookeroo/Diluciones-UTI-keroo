@@ -3323,7 +3323,7 @@ export default function App() {
           background: var(--bg-panel-alt);
         }
         .balance-tabla-header > div {
-          padding: 8px 4px;
+          padding: 6px 4px;
           font-size: 10.5px;
           font-weight: 700;
           color: var(--text-secondary);
@@ -3336,7 +3336,7 @@ export default function App() {
           border-top: 1px solid var(--border-panel);
         }
         .balance-tabla-fila > div {
-          padding: 9px 4px;
+          padding: 6px 4px;
           font-size: 15px;
           font-weight: 700;
           color: var(--text-primary);
