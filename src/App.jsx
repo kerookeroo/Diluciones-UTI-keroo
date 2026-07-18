@@ -3520,7 +3520,7 @@ export default function App() {
         .balance-panel-relative { position: relative; }
         .balance-reiniciar-flotante {
           position: absolute;
-          top: -14px;
+          top: -4px;
           right: 4px;
           z-index: 2;
           display: flex;
