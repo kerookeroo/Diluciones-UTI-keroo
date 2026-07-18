@@ -1876,10 +1876,10 @@ function Balance({ activo }) {
       <div className="balance-toggle-row">
         <div className="mode-tabs">
           <button className={`mode-tab ${vista === "parcial" ? "active" : ""}`} onClick={() => setVista("parcial")}>
-            Parcial
+            Balance Parcial
           </button>
           <button className={`mode-tab ${vista === "total" ? "active" : ""}`} onClick={() => setVista("total")}>
-            Total
+            Balance Total
           </button>
         </div>
         {vista === "total" && (ingresos.length > 0 || egresos.length > 0) && (
@@ -3571,6 +3571,11 @@ export default function App() {
           gap: 6px;
           margin-bottom: 18px;
           overflow-x: auto;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .mode-tabs::-webkit-scrollbar {
+          display: none;
         }
         .mode-tab {
           background: var(--bg-panel-alt);
