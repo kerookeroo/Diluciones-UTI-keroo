@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home, Scale, X } from "lucide-react";
+import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home, Scale, Trash2 } from "lucide-react";
 
 // Escala global de la interfaz para el uso real en el teléfono (todo se veía
 // muy chico en el PWA instalado). Subí o bajá este número para agrandar o
@@ -441,25 +441,25 @@ function resaltarDosis(texto) {
   return partes;
 }
 
-function Field({ label, unit, value, onChange, placeholder, onBlur }) {
+const Field = React.forwardRef(function Field({ label, unit, value, onChange, onBlur }, ref) {
   return (
     <label className="field">
       <span className="field-label">{label}</span>
       <div className="field-input-wrap">
         <input
+          ref={ref}
           className="field-input"
           type="text"
           inputMode="decimal"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
-          placeholder={placeholder}
         />
         {unit && <span className="field-unit">{unit}</span>}
       </div>
     </label>
   );
-}
+});
 
 function Inicio({ tema, toggleTheme, setTab }) {
   const esOscuro = tema === "dark";
@@ -1556,18 +1556,94 @@ function Goteo() {
   );
 }
 
+// Claves de localStorage para Balance. Mismo mecanismo ya probado que usa
+// esta app para persistir el tema (ver toggleTheme más abajo): así lo
+// cargado en Balance sobrevive a que el usuario cambie de pestaña, minimice
+// la app, o incluso a que el sistema operativo mate la pestaña en segundo
+// plano por falta de memoria durante un turno largo — cosas que pueden
+// pasar sin aviso y que hoy borrarían todo, ya que nada se guardaba en
+// ningún lado más que en la memoria RAM del momento.
+const LS_KEY_INGRESOS = "diluciones-uti-balance-ingresos";
+const LS_KEY_EGRESOS = "diluciones-uti-balance-egresos";
+const LS_KEY_INGRESOS_PARCIAL = "diluciones-uti-balance-ingresos-parcial";
+const LS_KEY_EGRESOS_PARCIAL = "diluciones-uti-balance-egresos-parcial";
+const LS_KEY_TRANSFERENCIAS = "diluciones-uti-balance-transferencias";
+
+// Lectura segura: si localStorage no está disponible (modo privado de
+// Safari, por ejemplo) o el dato guardado está corrupto/con otra forma,
+// arranca vacío en vez de romper la app.
+function leerListaGuardada(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function leerObjetoGuardado(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function guardarEnStorage(key, valor) {
+  try {
+    localStorage.setItem(key, JSON.stringify(valor));
+  } catch {
+    // Almacenamiento lleno o no disponible: la app se sigue pudiendo usar
+    // con normalidad, simplemente no persiste esta vez.
+  }
+}
+
+// Mayor id ya usado en una o más listas guardadas, para que el contador de
+// ids nuevos arranque después y nunca choque con uno restaurado.
+function mayorIdGuardado(...listas) {
+  let mayor = -1;
+  for (const lista of listas) {
+    for (const it of lista) {
+      if (typeof it.id === "number" && it.id > mayor) mayor = it.id;
+    }
+  }
+  return mayor;
+}
+
 // Calculadora de Balance de Ingresos y Egresos. A pedido explícito: sin
 // etiquetas ni categorías, solo el número y a qué columna va (Ingreso o
 // Egreso) — la idea es cargar rápido durante el turno, no documentar qué
 // era cada volumen. Aritmética pura (suma/resta); la app no interpreta ni
 // opina si el balance resultante es clínicamente adecuado, eso queda a
 // criterio del profesional.
-function Balance() {
-  const [ingresos, setIngresos] = useState([]); // [{ id, valor }]
-  const [egresos, setEgresos] = useState([]);
+function Balance({ activo }) {
+  const [vista, setVista] = useState("parcial"); // "total" | "parcial"
+
+  // Balance queda siempre montado en memoria (para el swipe entre pestañas),
+  // así que sin esto el estado de "parcial/total" se quedaría pegado en lo
+  // último que elegiste, incluso yendo y viniendo de otras pestañas. Este
+  // efecto detecta el momento exacto en que se ENTRA a la pestaña Balance
+  // (activo pasa de false a true) y ahí sí arranca en "Parcial" — mientras
+  // estés adentro, podés cambiar a "Total" libremente sin que se resetee
+  // solo, y arranca desde Parcial siempre que la vuelvas a abrir.
+  useEffect(() => {
+    if (activo) setVista("parcial");
+  }, [activo]);
+
+  // --- Balance Total (sin cambios respecto a como ya funcionaba) ---
+  const [ingresos, setIngresos] = useState(() => leerListaGuardada(LS_KEY_INGRESOS)); // [{ id, valor }]
+  const [egresos, setEgresos] = useState(() => leerListaGuardada(LS_KEY_EGRESOS));
   const [tipo, setTipo] = useState("ingreso"); // "ingreso" | "egreso"
   const [valor, setValor] = useState("");
-  const idRef = useRef(0);
+  const idRef = useRef(mayorIdGuardado(leerListaGuardada(LS_KEY_INGRESOS), leerListaGuardada(LS_KEY_EGRESOS)) + 1);
+
+  useEffect(() => { guardarEnStorage(LS_KEY_INGRESOS, ingresos); }, [ingresos]);
+  useEffect(() => { guardarEnStorage(LS_KEY_EGRESOS, egresos); }, [egresos]);
 
   const agregar = () => {
     const n = num(valor);
@@ -1591,101 +1667,466 @@ function Balance() {
   // Suma con acumulador redondeado a 2 decimales en cada paso para evitar
   // que errores de redondeo flotante de JS (ej. 0.1 + 0.2) se acumulen a lo
   // largo de una lista larga de valores durante un turno de 12h.
-  const sumar = (lista) => lista.reduce((acc, it) => Math.round((acc + it.valor) * 100) / 100, 0);
+  const sumar = (lista, campo) => lista.reduce((acc, it) => Math.round((acc + (it[campo] ?? 0)) * 100) / 100, 0);
 
-  const totalIngresos = useMemo(() => sumar(ingresos), [ingresos]);
-  const totalEgresos = useMemo(() => sumar(egresos), [egresos]);
+  const totalIngresos = useMemo(() => sumar(ingresos, "valor"), [ingresos]);
+  const totalEgresos = useMemo(() => sumar(egresos, "valor"), [egresos]);
   const balance = Math.round((totalIngresos - totalEgresos) * 100) / 100;
 
+  // --- Balance Parcial (nuevo) ---
+  // Pensado para trackear sueros/planes activos durante UN turno: cada fila
+  // guarda Total / Pasó / Quedó, atados por Total = Pasó + Quedó. El único
+  // número que importa para el balance del turno es la suma de "Pasó" (lo
+  // que efectivamente se infundió); "Quedó" es la referencia que se le pasa
+  // al turno siguiente, no se sube a ningún total.
+  const [ingresosParcial, setIngresosParcial] = useState(() => leerListaGuardada(LS_KEY_INGRESOS_PARCIAL)); // [{ id, total, paso, quedo }]
+  const [egresosParcial, setEgresosParcial] = useState(() => leerListaGuardada(LS_KEY_EGRESOS_PARCIAL)); // [{ id, valor }] — igual que Balance Total
+  const [campoTotal, setCampoTotal] = useState("");
+  const [campoPaso, setCampoPaso] = useState("");
+  const [campoQuedo, setCampoQuedo] = useState("");
+  const [valorEgresoParcial, setValorEgresoParcial] = useState("");
+  const idParcialRef = useRef(mayorIdGuardado(leerListaGuardada(LS_KEY_INGRESOS_PARCIAL), leerListaGuardada(LS_KEY_EGRESOS_PARCIAL)) + 1);
+  const campoTotalRef = useRef(null);
+
+  useEffect(() => { guardarEnStorage(LS_KEY_INGRESOS_PARCIAL, ingresosParcial); }, [ingresosParcial]);
+  useEffect(() => { guardarEnStorage(LS_KEY_EGRESOS_PARCIAL, egresosParcial); }, [egresosParcial]);
+
+  // Orden de edición de los 3 campos (más reciente primero). Cada vez que se
+  // tipea uno, se recalcula el que quedó último en esta lista — así "los dos
+  // que sepas" resuelven al tercero, sin importar cuáles dos sean.
+  const ordenCamposRef = useRef(["total", "paso", "quedo"]);
+
+  const actualizarCampoParcial = (campo, valorStr) => {
+    const valorAnterior = { total: campoTotal, paso: campoPaso, quedo: campoQuedo };
+    valorAnterior[campo] = valorStr;
+    ({ total: setCampoTotal, paso: setCampoPaso, quedo: setCampoQuedo }[campo])(valorStr);
+
+    const nuevoOrden = [campo, ...ordenCamposRef.current.filter((c) => c !== campo)];
+    ordenCamposRef.current = nuevoOrden;
+    const campoAutomatico = nuevoOrden[2]; // el que quedó menos reciente de los tres
+
+    const nTotal = num(valorAnterior.total);
+    const nPaso = num(valorAnterior.paso);
+    const nQuedo = num(valorAnterior.quedo);
+
+    if (campoAutomatico === "total" && nPaso != null && nQuedo != null) {
+      setCampoTotal(fmtDosis(nPaso + nQuedo, 2));
+    } else if (campoAutomatico === "paso" && nTotal != null && nQuedo != null) {
+      setCampoPaso(fmtDosis(nTotal - nQuedo, 2));
+    } else if (campoAutomatico === "quedo" && nTotal != null && nPaso != null) {
+      setCampoQuedo(fmtDosis(nTotal - nPaso, 2));
+    }
+  };
+
+  const agregarIngresoParcial = () => {
+    const nTotal = num(campoTotal);
+    if (nTotal == null) return;
+    // Pasó y Quedó ahora son opcionales al cargar: si al recibir el turno ya
+    // sabés cuánto trae cada suero (Total) pero todavía no cuánto pasó/quedó
+    // (eso se sabe recién al cerrar el turno), se puede agregar la fila solo
+    // con el Total y completar el resto más tarde tocando la celda en la
+    // tabla. Si ya se sabían 2 de los 3 (por el resolver de arriba), quedan
+    // guardados de una.
+    const nPaso = num(campoPaso);
+    const nQuedo = num(campoQuedo);
+    const item = { id: idParcialRef.current++, total: nTotal, paso: nPaso, quedo: nQuedo };
+    setIngresosParcial((arr) => [...arr, item]);
+    setCampoTotal("");
+    setCampoPaso("");
+    setCampoQuedo("");
+    ordenCamposRef.current = ["total", "paso", "quedo"];
+    // Foco automático en "Vol. Total" para cargar el siguiente suero/plan sin
+    // tener que tocar el campo a mano cada vez.
+    campoTotalRef.current?.focus();
+  };
+
+  // Edición de celda directamente en la tabla: tocás "Pasó" o "Quedó" de una
+  // fila ya cargada (estén vacías o con un valor previo) y aparece un input
+  // ahí mismo. Al confirmar, esa fila recalcula el otro campo (el que no se
+  // tocó) usando Total = Pasó + Quedó, así la fila queda siempre consistente
+  // matemáticamente, sin importar el orden en que se complete.
+  const [celdaEditando, setCeldaEditando] = useState(null); // { id, campo: "paso"|"quedo" } | null
+  const [valorCeldaEditando, setValorCeldaEditando] = useState("");
+
+  const iniciarEdicionCelda = (id, campo, valorActual) => {
+    setCeldaEditando({ id, campo });
+    setValorCeldaEditando(valorActual != null ? fmtDosis(valorActual, 2) : "");
+  };
+
+  const confirmarEdicionCelda = () => {
+    if (!celdaEditando) return;
+    const { id, campo } = celdaEditando;
+    const n = num(valorCeldaEditando);
+    setIngresosParcial((arr) =>
+      arr.map((it) => {
+        if (it.id !== id) return it;
+        const otroCampo = campo === "paso" ? "quedo" : "paso";
+        const actualizado = { ...it, [campo]: n };
+        if (n != null && actualizado.total != null) {
+          actualizado[otroCampo] = Math.round((actualizado.total - n) * 100) / 100;
+        }
+        return actualizado;
+      })
+    );
+    setCeldaEditando(null);
+    setValorCeldaEditando("");
+  };
+
+  const agregarEgresoParcial = () => {
+    const n = num(valorEgresoParcial);
+    if (!n || n <= 0) return;
+    setEgresosParcial((arr) => [...arr, { id: idParcialRef.current++, valor: n }]);
+    setValorEgresoParcial("");
+  };
+
+  const eliminarParcial = (lista, id) => {
+    if (lista === "ingreso") setIngresosParcial((arr) => arr.filter((it) => it.id !== id));
+    else setEgresosParcial((arr) => arr.filter((it) => it.id !== id));
+  };
+
+  const reiniciarParcial = () => {
+    setIngresosParcial([]);
+    setEgresosParcial([]);
+  };
+
+  const totalPasoParcial = useMemo(() => sumar(ingresosParcial, "paso"), [ingresosParcial]);
+  const totalEgresosParcial = useMemo(() => sumar(egresosParcial, "valor"), [egresosParcial]);
+  const balanceParcial = Math.round((totalPasoParcial - totalEgresosParcial) * 100) / 100;
+
+  // "Enviar a Balance Total": la primera vez crea una entrada nueva en
+  // Ingresos/Egresos de Balance Total; si se vuelve a apretar, ACTUALIZA esa
+  // misma entrada con el nuevo total en vez de duplicarla (para no ir
+  // acumulando envíos repetidos del mismo turno). Si el usuario borró esa
+  // entrada a mano en Balance Total, se detecta y se crea una nueva. El
+  // botón se deshabilita mientras el subtotal no cambie desde el último
+  // envío, y se reactiva solo si se agrega/quita un ítem de la lista (o si
+  // la entrada enviada ya no existe en Balance Total).
+  const [idTransferidoIngreso, setIdTransferidoIngreso] = useState(() => leerObjetoGuardado(LS_KEY_TRANSFERENCIAS).idTransferidoIngreso ?? null);
+  const [idTransferidoEgreso, setIdTransferidoEgreso] = useState(() => leerObjetoGuardado(LS_KEY_TRANSFERENCIAS).idTransferidoEgreso ?? null);
+  const [ultimoPasoEnviado, setUltimoPasoEnviado] = useState(() => leerObjetoGuardado(LS_KEY_TRANSFERENCIAS).ultimoPasoEnviado ?? null);
+  const [ultimoEgresoEnviado, setUltimoEgresoEnviado] = useState(() => leerObjetoGuardado(LS_KEY_TRANSFERENCIAS).ultimoEgresoEnviado ?? null);
+
+  useEffect(() => {
+    guardarEnStorage(LS_KEY_TRANSFERENCIAS, {
+      idTransferidoIngreso,
+      idTransferidoEgreso,
+      ultimoPasoEnviado,
+      ultimoEgresoEnviado,
+    });
+  }, [idTransferidoIngreso, idTransferidoEgreso, ultimoPasoEnviado, ultimoEgresoEnviado]);
+
+  const existeIngresoTransferido = idTransferidoIngreso != null && ingresos.some((it) => it.id === idTransferidoIngreso);
+  const existeEgresoTransferido = idTransferidoEgreso != null && egresos.some((it) => it.id === idTransferidoEgreso);
+  const botonPasoDeshabilitado = totalPasoParcial <= 0 || (existeIngresoTransferido && ultimoPasoEnviado === totalPasoParcial);
+  const botonEgresoParcialDeshabilitado = totalEgresosParcial <= 0 || (existeEgresoTransferido && ultimoEgresoEnviado === totalEgresosParcial);
+
+  const enviarPasoATotal = () => {
+    if (totalPasoParcial <= 0) return;
+    if (existeIngresoTransferido) {
+      setIngresos((arr) => arr.map((it) => (it.id === idTransferidoIngreso ? { ...it, valor: totalPasoParcial } : it)));
+    } else {
+      const nuevoId = idRef.current++;
+      setIngresos((arr) => [...arr, { id: nuevoId, valor: totalPasoParcial }]);
+      setIdTransferidoIngreso(nuevoId);
+    }
+    setUltimoPasoEnviado(totalPasoParcial);
+  };
+
+  const enviarEgresoATotal = () => {
+    if (totalEgresosParcial <= 0) return;
+    if (existeEgresoTransferido) {
+      setEgresos((arr) => arr.map((it) => (it.id === idTransferidoEgreso ? { ...it, valor: totalEgresosParcial } : it)));
+    } else {
+      const nuevoId = idRef.current++;
+      setEgresos((arr) => [...arr, { id: nuevoId, valor: totalEgresosParcial }]);
+      setIdTransferidoEgreso(nuevoId);
+    }
+    setUltimoEgresoEnviado(totalEgresosParcial);
+  };
+
   return (
-    <div className="panel">
-      <div className="section-title">¿Qué querés balancear?</div>
+    <div className="panel balance-panel-relative">
+      {vista === "total" && (ingresos.length > 0 || egresos.length > 0) && (
+        <button type="button" className="balance-reiniciar-flotante" onClick={reiniciar}>
+          <RotateCcw size={14} /> Reiniciar
+        </button>
+      )}
+      {vista === "parcial" && (ingresosParcial.length > 0 || egresosParcial.length > 0) && (
+        <button type="button" className="balance-reiniciar-flotante" onClick={reiniciarParcial}>
+          <RotateCcw size={14} /> Reiniciar
+        </button>
+      )}
       <div className="balance-toggle-row">
         <div className="mode-tabs">
-          <button className={`mode-tab ${tipo === "ingreso" ? "active" : ""}`} onClick={() => setTipo("ingreso")}>
-            Ingreso
+          <button className={`mode-tab ${vista === "parcial" ? "active" : ""}`} onClick={() => setVista("parcial")}>
+            Balance Parcial
           </button>
-          <button className={`mode-tab ${tipo === "egreso" ? "active" : ""}`} onClick={() => setTipo("egreso")}>
-            Egreso
+          <button className={`mode-tab ${vista === "total" ? "active" : ""}`} onClick={() => setVista("total")}>
+            Balance Total
           </button>
         </div>
-        {(ingresos.length > 0 || egresos.length > 0) && (
-          <button type="button" className="balance-reiniciar-btn" onClick={reiniciar}>
-            <RotateCcw size={14} /> Reiniciar
-          </button>
-        )}
       </div>
 
-      <div className="panel-row two-col balance-columnas">
-        <div className="balance-columna">
-          <div className="balance-columna-titulo balance-columna-titulo-ingreso">INGRESOS</div>
-          {ingresos.length === 0 ? (
-            <div className="balance-vacio">Sin ingresos cargados.</div>
+      {vista === "total" && (
+        <>
+          <div className="panel-row two-col balance-columnas">
+            <div
+              role="button"
+              tabIndex={0}
+              className={`balance-columna balance-columna-clickable ${tipo === "ingreso" ? "balance-columna-activa-ingreso" : ""}`}
+              onClick={() => setTipo("ingreso")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setTipo("ingreso"); }}
+            >
+              <div className="balance-columna-titulo balance-columna-titulo-ingreso">INGRESOS</div>
+              {ingresos.length === 0 ? (
+                <div className="balance-vacio">Sin ingresos cargados.</div>
+              ) : (
+                <div className="balance-lista">
+                  {ingresos.map((it) => (
+                    <div className="balance-item" key={it.id}>
+                      <span>{fmtDosis(it.valor, 2)} ml</span>
+                      <button
+                        type="button"
+                        className="balance-item-borrar"
+                        onClick={(e) => { e.stopPropagation(); eliminar("ingreso", it.id); }}
+                        aria-label="Quitar"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="balance-subtotal">Subtotal: {fmtDosis(totalIngresos, 2)} ml</div>
+            </div>
+
+            <div
+              role="button"
+              tabIndex={0}
+              className={`balance-columna balance-columna-clickable ${tipo === "egreso" ? "balance-columna-activa-egreso" : ""}`}
+              onClick={() => setTipo("egreso")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setTipo("egreso"); }}
+            >
+              <div className="balance-columna-titulo balance-columna-titulo-egreso">EGRESOS</div>
+              {egresos.length === 0 ? (
+                <div className="balance-vacio">Sin egresos cargados.</div>
+              ) : (
+                <div className="balance-lista">
+                  {egresos.map((it) => (
+                    <div className="balance-item" key={it.id}>
+                      <span>{fmtDosis(it.valor, 2)} ml</span>
+                      <button
+                        type="button"
+                        className="balance-item-borrar"
+                        onClick={(e) => { e.stopPropagation(); eliminar("egreso", it.id); }}
+                        aria-label="Quitar"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="balance-subtotal">Subtotal: {fmtDosis(totalEgresos, 2)} ml</div>
+            </div>
+          </div>
+
+          <div className={`panel-row balance-agregar-row ${tipo === "egreso" ? "balance-agregar-row-egreso" : ""}`}>
+            <Field
+              label={tipo === "ingreso" ? "Volumen a ingresar" : "Agregar egreso"}
+              unit="ml"
+              value={valor}
+              onChange={setValor}
+            />
+            <button
+              type="button"
+              className={`balance-agregar-btn ${tipo === "egreso" ? "balance-agregar-btn-egreso" : ""}`}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={agregar}
+              aria-label="Agregar volumen"
+            >
+              +
+            </button>
+          </div>
+
+          <div className="result-block">
+            <div className="result-main">
+              <span className="result-main-value">{balance > 0 ? "+" : ""}{fmtDosis(balance, 2)}</span>
+              <span className="result-main-unit">ml</span>
+            </div>
+          </div>
+
+          <div className="disclaimer">
+            <AlertCircle size={13} />
+            <span>Esta calculadora solo suma y resta los volúmenes cargados. No estima pérdidas insensibles ni evalúa si el balance resultante es adecuado para el paciente: esa interpretación queda a criterio clínico.</span>
+          </div>
+        </>
+      )}
+
+      {vista === "parcial" && (
+        <>
+          <div className="section-title balance-titulo-sin-margen balance-titulo-destacado balance-titulo-ingreso">Ingresos del turno</div>
+          {ingresosParcial.length === 0 ? (
+            <div className="balance-vacio balance-vacio-parcial">Sin planes cargados todavía.</div>
+          ) : (
+            <div className="balance-tabla-parcial">
+              <div className="balance-tabla-header">
+                <div>Volumen total (ml)</div>
+                <div className="balance-tabla-th-grande">Pasó</div>
+                <div className="balance-tabla-th-grande">Quedó</div>
+                <div></div>
+              </div>
+              {ingresosParcial.map((it) => (
+                <div className="balance-tabla-fila" key={it.id}>
+                  <div>{fmtDosis(it.total, 2)}</div>
+
+                  {celdaEditando?.id === it.id && celdaEditando?.campo === "paso" ? (
+                    <input
+                      className="balance-tabla-input"
+                      type="text"
+                      inputMode="decimal"
+                      autoFocus
+                      value={valorCeldaEditando}
+                      onChange={(e) => setValorCeldaEditando(e.target.value)}
+                      onBlur={confirmarEdicionCelda}
+                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                    />
+                  ) : (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className={`balance-tabla-col-paso ${it.paso == null ? "balance-tabla-col-vacia" : ""}`}
+                      onClick={() => iniciarEdicionCelda(it.id, "paso", it.paso)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") iniciarEdicionCelda(it.id, "paso", it.paso); }}
+                    >
+                      {it.paso != null ? fmtDosis(it.paso, 2) : "—"}
+                    </div>
+                  )}
+
+                  {celdaEditando?.id === it.id && celdaEditando?.campo === "quedo" ? (
+                    <input
+                      className="balance-tabla-input"
+                      type="text"
+                      inputMode="decimal"
+                      autoFocus
+                      value={valorCeldaEditando}
+                      onChange={(e) => setValorCeldaEditando(e.target.value)}
+                      onBlur={confirmarEdicionCelda}
+                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                    />
+                  ) : (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className={`balance-tabla-col-quedo ${it.quedo == null ? "balance-tabla-col-vacia" : ""}`}
+                      onClick={() => iniciarEdicionCelda(it.id, "quedo", it.quedo)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") iniciarEdicionCelda(it.id, "quedo", it.quedo); }}
+                    >
+                      {it.quedo != null ? fmtDosis(it.quedo, 2) : "—"}
+                    </div>
+                  )}
+
+                  <div>
+                    <button
+                      type="button"
+                      className="balance-item-borrar"
+                      onClick={() => eliminarParcial("ingreso", it.id)}
+                      aria-label="Quitar"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="section-title">Suero infundido</div>
+          <div className="balance-parcial-form">
+            <Field ref={campoTotalRef} label="Vol. Total" unit="ml" value={campoTotal} onChange={(v) => actualizarCampoParcial("total", v)} />
+            <Field label="Pasó" unit="ml" value={campoPaso} onChange={(v) => actualizarCampoParcial("paso", v)} />
+            <Field label="Quedó" unit="ml" value={campoQuedo} onChange={(v) => actualizarCampoParcial("quedo", v)} />
+          </div>
+          <button
+            type="button"
+            className="balance-agregar-parcial-btn"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={agregarIngresoParcial}
+          >
+            Agregar a Ingresos
+          </button>
+
+          <div className="balance-subtotal-parcial-row">
+            <div className="balance-subtotal-parcial-texto balance-texto-ingreso">
+              Total Ingresos: <strong>{fmtDosis(totalPasoParcial, 2)} ml</strong>
+            </div>
+            <button type="button" className="balance-enviar-btn balance-enviar-btn-ingreso" onClick={enviarPasoATotal} disabled={botonPasoDeshabilitado}>
+              Enviar a Balance Total
+            </button>
+          </div>
+
+          <div className="section-title balance-titulo-destacado balance-titulo-egreso">Egresos del turno</div>
+          {egresosParcial.length === 0 ? (
+            <div className="balance-vacio balance-vacio-parcial">Sin egresos cargados.</div>
           ) : (
             <div className="balance-lista">
-              {ingresos.map((it) => (
+              {egresosParcial.map((it) => (
                 <div className="balance-item" key={it.id}>
                   <span>{fmtDosis(it.valor, 2)} ml</span>
-                  <button type="button" className="balance-item-borrar" onClick={() => eliminar("ingreso", it.id)} aria-label="Quitar">
-                    <X size={14} />
+                  <button
+                    type="button"
+                    className="balance-item-borrar"
+                    onClick={() => eliminarParcial("egreso", it.id)}
+                    aria-label="Quitar"
+                  >
+                    <Trash2 size={18} />
                   </button>
                 </div>
               ))}
             </div>
           )}
-          <div className="balance-subtotal">Subtotal: {fmtDosis(totalIngresos, 2)} ml</div>
-        </div>
-
-        <div className="balance-columna">
-          <div className="balance-columna-titulo balance-columna-titulo-egreso">EGRESOS</div>
-          {egresos.length === 0 ? (
-            <div className="balance-vacio">Sin egresos cargados.</div>
-          ) : (
-            <div className="balance-lista">
-              {egresos.map((it) => (
-                <div className="balance-item" key={it.id}>
-                  <span>{fmtDosis(it.valor, 2)} ml</span>
-                  <button type="button" className="balance-item-borrar" onClick={() => eliminar("egreso", it.id)} aria-label="Quitar">
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
+          <div className="panel-row balance-agregar-row balance-agregar-row-egreso">
+            <Field
+              label="Agregar egreso"
+              unit="ml"
+              value={valorEgresoParcial}
+              onChange={setValorEgresoParcial}
+            />
+            <button
+              type="button"
+              className="balance-agregar-btn balance-agregar-btn-egreso"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={agregarEgresoParcial}
+              aria-label="Agregar egreso"
+            >
+              +
+            </button>
+          </div>
+          {egresosParcial.length > 0 && (
+            <div className="balance-subtotal-parcial-row">
+              <div className="balance-subtotal-parcial-texto balance-texto-egreso">
+                Total Egresos: <strong>{fmtDosis(totalEgresosParcial, 2)} ml</strong>
+              </div>
+              <button type="button" className="balance-enviar-btn balance-enviar-btn-egreso" onClick={enviarEgresoATotal} disabled={botonEgresoParcialDeshabilitado}>
+                Enviar a Balance Total
+              </button>
             </div>
           )}
-          <div className="balance-subtotal">Subtotal: {fmtDosis(totalEgresos, 2)} ml</div>
-        </div>
-      </div>
 
-      <div className="panel-row balance-agregar-row">
-        <Field
-          label={tipo === "ingreso" ? "Volumen a ingresar" : "Volumen a egresar"}
-          unit="ml"
-          value={valor}
-          onChange={setValor}
-          placeholder="ej: 500"
-        />
-        <button
-          type="button"
-          className="balance-agregar-btn"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={agregar}
-          aria-label="Agregar volumen"
-        >
-          +
-        </button>
-      </div>
+          <div className="result-block">
+            <div className="balance-resultado-titulo">Total balance parcial</div>
+            <div className="result-main">
+              <span className="result-main-value">{balanceParcial > 0 ? "+" : ""}{fmtDosis(balanceParcial, 2)}</span>
+              <span className="result-main-unit">ml</span>
+            </div>
+          </div>
 
-      <div className="result-block">
-        <div className="result-main">
-          <span className="result-main-value">{balance > 0 ? "+" : ""}{fmtDosis(balance, 2)}</span>
-          <span className="result-main-unit">ml balance</span>
-        </div>
-      </div>
-
-      <div className="disclaimer">
-        <AlertCircle size={13} />
-        <span>Esta calculadora solo suma y resta los volúmenes cargados. No estima pérdidas insensibles ni evalúa si el balance resultante es adecuado para el paciente: esa interpretación queda a criterio clínico.</span>
-      </div>
+          <div className="disclaimer">
+            <AlertCircle size={13} />
+            <span>"Pasó" es lo que se sumó del suero/plan durante el turno; "Quedó" es la referencia para el turno siguiente y no se suma a ningún total. Esta calculadora no reemplaza el registro formal de enfermería.</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -2784,6 +3225,7 @@ export default function App() {
           flex-shrink: 0;
           touch-action: manipulation;
         }
+        .balance-agregar-btn-egreso { background: var(--accent-orange); }
         .balance-columnas { gap: 12px; }
         .balance-columna {
           background: var(--bg-panel-alt);
@@ -2793,6 +3235,19 @@ export default function App() {
           display: flex;
           flex-direction: column;
           min-height: 140px;
+        }
+        .balance-columna-clickable {
+          cursor: pointer;
+          touch-action: manipulation;
+          transition: border-color 0.15s ease, background 0.15s ease;
+        }
+        .balance-columna-activa-ingreso {
+          border-color: var(--accent-green-border);
+          background: var(--box-green-border-soft);
+        }
+        .balance-columna-activa-egreso {
+          border-color: var(--accent-orange);
+          background: var(--box-amber-bg);
         }
         .balance-columna-titulo {
           font-size: 11px;
@@ -2828,8 +3283,8 @@ export default function App() {
         .balance-item-borrar {
           background: transparent;
           border: none;
-          color: var(--text-secondary);
-          padding: 2px;
+          color: var(--accent-red);
+          padding: 4px;
           display: flex;
           cursor: pointer;
           touch-action: manipulation;
@@ -2843,29 +3298,207 @@ export default function App() {
           color: var(--text-primary);
           font-variant-numeric: tabular-nums;
         }
-        .balance-toggle-row {
+        .balance-vacio-parcial {
+          font-size: 12.5px;
+          color: var(--text-secondary);
+          padding: 4px 0 12px;
+        }
+        .balance-resultado-titulo {
+          font-size: 12.5px;
+          color: var(--text-secondary);
+          font-weight: 500;
+          text-align: center;
+        }
+        .balance-tabla-parcial {
+          border: 1px solid var(--border-panel);
+          border-radius: 12px;
+          overflow: hidden;
+          margin-bottom: 4px;
+        }
+        .balance-tabla-header, .balance-tabla-fila {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr 40px;
+        }
+        .balance-tabla-header {
+          background: var(--bg-panel-alt);
+        }
+        .balance-tabla-header > div {
+          padding: 10px 4px;
+          font-size: 10.5px;
+          font-weight: 700;
+          color: var(--text-secondary);
+          text-align: center;
+        }
+        .balance-tabla-header > div.balance-tabla-th-grande {
+          font-size: 15px;
+        }
+        .balance-tabla-fila {
+          border-top: 1px solid var(--border-panel);
+        }
+        .balance-tabla-fila > div {
+          padding: 12px 4px;
+          font-size: 17px;
+          font-weight: 700;
+          color: var(--text-primary);
+          text-align: center;
+          font-variant-numeric: tabular-nums;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .balance-tabla-header > div:not(:last-child),
+        .balance-tabla-fila > div:not(:last-child) {
+          border-right: 1px solid var(--border-panel);
+        }
+        .balance-tabla-fila > div:last-child { padding: 4px; }
+        /* Selector compuesto (mismo peso que la regla base de arriba) para
+           que el verde y el tamaño grande realmente ganen la cascada: una
+           clase sola (.balance-tabla-col-paso) tiene MENOS especificidad
+           que ".balance-tabla-fila > div" y perdía en silencio, aunque
+           estuviera escrita después — por eso no se veía verde. */
+        .balance-tabla-fila > div.balance-tabla-col-paso {
+          color: var(--accent-green);
+          font-size: 23px;
+        }
+        .balance-tabla-fila > div.balance-tabla-col-quedo {
+          font-size: 14px;
+          font-weight: 600;
+          color: var(--text-secondary);
+        }
+        .balance-tabla-fila > div.balance-tabla-col-vacia {
+          color: var(--text-quaternary);
+          font-weight: 400;
+          cursor: pointer;
+          touch-action: manipulation;
+        }
+        .balance-tabla-input {
+          width: 100%;
+          height: 100%;
+          border: none;
+          border-left: 1px solid var(--border-panel);
+          background: var(--box-green-border-soft);
+          color: var(--text-primary);
+          font-size: 20px;
+          font-weight: 700;
+          font-variant-numeric: tabular-nums;
+          text-align: center;
+          outline: none;
+          padding: 12px 4px;
+          appearance: none;
+        }
+        .balance-parcial-form {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 8px;
+        }
+        .balance-parcial-form .field-label { color: var(--accent-green-deep); }
+        .balance-agregar-row-egreso .field-label { color: var(--accent-orange-deep); }
+        .balance-agregar-row-egreso .field-input:focus { border-color: var(--accent-orange); }
+        .balance-agregar-parcial-btn {
+          width: 100%;
+          background: var(--accent-green);
+          color: var(--bg-app);
+          border: none;
+          border-radius: 12px;
+          padding: 12px;
+          font-size: 13.5px;
+          font-weight: 700;
+          margin-top: 10px;
+          margin-bottom: 20px;
+          cursor: pointer;
+          touch-action: manipulation;
+        }
+        .balance-subtotal-parcial-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 10px;
+          margin-top: 10px;
+          padding-top: 10px;
+          border-top: 1px solid var(--border-panel);
+        }
+        .balance-subtotal-parcial-texto {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .balance-enviar-btn { flex-shrink: 0; }
+        .balance-subtotal-parcial-texto {
+          font-size: 15px;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+        .balance-subtotal-parcial-texto strong {
+          font-size: 19px;
+          font-variant-numeric: tabular-nums;
+        }
+        .balance-texto-ingreso, .balance-texto-ingreso strong { color: var(--accent-green-deep); }
+        .balance-texto-ingreso strong { color: var(--accent-green); }
+        .balance-texto-egreso, .balance-texto-egreso strong { color: var(--accent-orange-deep); }
+        .balance-texto-egreso strong { color: var(--accent-orange); }
+        .balance-enviar-btn {
+          background: transparent;
+          border-radius: 20px;
+          padding: 8px 14px;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          touch-action: manipulation;
+          white-space: nowrap;
+        }
+        .balance-enviar-btn-ingreso {
+          border: 1px solid var(--accent-green-border);
+          color: var(--accent-green);
+        }
+        .balance-enviar-btn-egreso {
+          border: 1px solid var(--accent-orange-deep);
+          color: var(--accent-orange);
+        }
+        .balance-enviar-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        .balance-toggle-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-top: 8px;
           margin-bottom: 20px;
         }
         .balance-toggle-row .mode-tabs { margin-bottom: 0; }
-        .balance-reiniciar-btn {
+        .balance-titulo-sin-margen {
+          margin: 0;
+          padding-top: 0;
+          border-top: none;
+        }
+        .balance-titulo-destacado {
+          font-size: 15px;
+          letter-spacing: 0.02em;
+          color: var(--text-primary);
+        }
+        .balance-titulo-ingreso { color: var(--accent-green-deep); }
+        .balance-titulo-egreso { color: var(--accent-orange); }
+        .balance-panel-relative { position: relative; }
+        .balance-reiniciar-flotante {
+          position: absolute;
+          top: -14px;
+          right: 4px;
+          z-index: 2;
           display: flex;
           align-items: center;
           gap: 5px;
-          flex-shrink: 0;
-          background: transparent;
+          background: var(--bg-panel);
           border: 1px solid var(--border-panel);
-          color: var(--text-secondary);
+          color: var(--accent-green-deep);
           border-radius: 20px;
-          padding: 9px 12px;
+          padding: 9px 14px;
           font-size: 12px;
           font-weight: 600;
           white-space: nowrap;
           cursor: pointer;
           touch-action: manipulation;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
         }
         .info-note {
           background: var(--box-green-bg);
@@ -2921,6 +3554,11 @@ export default function App() {
           background: var(--box-green-border-soft);
           border-color: var(--accent-green-border);
           color: var(--accent-green);
+        }
+        .balance-toggle-row .mode-tab.active {
+          background: var(--accent-green);
+          border-color: var(--accent-green);
+          color: var(--bg-app);
         }
         .inicio-panel {
           display: flex;
@@ -3094,7 +3732,7 @@ export default function App() {
           <div className="tab-panel">
             <div className="tab-panel-scroll">
               <div className="tab-panel-inner">
-                <BalanceMemo />
+                <BalanceMemo activo={tab === "balance"} />
               </div>
             </div>
           </div>
