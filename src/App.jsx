@@ -3274,7 +3274,7 @@ export default function App() {
           justify-content: space-between;
           background: var(--bg-panel);
           border-radius: 8px;
-          padding: 7px 10px;
+          padding: 8px 12px;
           font-size: 13.5px;
           font-weight: 600;
           color: var(--text-primary);
@@ -3313,7 +3313,7 @@ export default function App() {
           border: 1px solid var(--border-panel);
           border-radius: 12px;
           overflow: hidden;
-          margin-bottom: 4px;
+          margin-bottom: 14px;
         }
         .balance-tabla-header, .balance-tabla-fila {
           display: grid;
@@ -3323,21 +3323,21 @@ export default function App() {
           background: var(--bg-panel-alt);
         }
         .balance-tabla-header > div {
-          padding: 10px 4px;
+          padding: 8px 4px;
           font-size: 10.5px;
           font-weight: 700;
           color: var(--text-secondary);
           text-align: center;
         }
         .balance-tabla-header > div.balance-tabla-th-grande {
-          font-size: 15px;
+          font-size: 12.5px;
         }
         .balance-tabla-fila {
           border-top: 1px solid var(--border-panel);
         }
         .balance-tabla-fila > div {
-          padding: 12px 4px;
-          font-size: 17px;
+          padding: 9px 4px;
+          font-size: 15px;
           font-weight: 700;
           color: var(--text-primary);
           text-align: center;
@@ -3358,10 +3358,10 @@ export default function App() {
            estuviera escrita después — por eso no se veía verde. */
         .balance-tabla-fila > div.balance-tabla-col-paso {
           color: var(--accent-green);
-          font-size: 23px;
+          font-size: 19px;
         }
         .balance-tabla-fila > div.balance-tabla-col-quedo {
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 600;
           color: var(--text-secondary);
         }
@@ -3404,7 +3404,7 @@ export default function App() {
           font-size: 13.5px;
           font-weight: 700;
           margin-top: 10px;
-          margin-bottom: 20px;
+          margin-bottom: 16px;
           cursor: pointer;
           touch-action: manipulation;
         }
@@ -3414,6 +3414,7 @@ export default function App() {
           justify-content: space-between;
           gap: 10px;
           margin-top: 10px;
+          margin-bottom: 6px;
           padding-top: 10px;
           border-top: 1px solid var(--border-panel);
         }
@@ -3459,7 +3460,7 @@ export default function App() {
           align-items: center;
           gap: 10px;
           margin-top: 8px;
-          margin-bottom: 20px;
+          margin-bottom: 18px;
         }
         .balance-toggle-row .mode-tabs { margin-bottom: 0; }
         .balance-titulo-sin-margen {
