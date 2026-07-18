@@ -3505,6 +3505,7 @@ export default function App() {
           margin-bottom: 18px;
         }
         .balance-toggle-row .mode-tabs { margin-bottom: 0; min-width: 0; flex-shrink: 1; }
+        .balance-toggle-row .mode-tab { font-size: 10.5px; padding: 7px 10px; }
         .balance-titulo-sin-margen {
           margin: 0;
           padding-top: 0;
