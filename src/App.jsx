@@ -441,7 +441,7 @@ function resaltarDosis(texto) {
   return partes;
 }
 
-const Field = React.forwardRef(function Field({ label, unit, value, onChange, onBlur }, ref) {
+const Field = React.forwardRef(function Field({ label, unit, value, onChange, onBlur, onKeyDown, enterKeyHint }, ref) {
   return (
     <label className="field">
       <span className="field-label">{label}</span>
@@ -451,9 +451,11 @@ const Field = React.forwardRef(function Field({ label, unit, value, onChange, on
           className="field-input"
           type="text"
           inputMode="decimal"
+          enterKeyHint={enterKeyHint}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
+          onKeyDown={onKeyDown}
         />
         {unit && <span className="field-unit">{unit}</span>}
       </div>
@@ -1687,6 +1689,13 @@ function Balance({ activo }) {
   const [valorEgresoParcial, setValorEgresoParcial] = useState("");
   const idParcialRef = useRef(mayorIdGuardado(leerListaGuardada(LS_KEY_INGRESOS_PARCIAL), leerListaGuardada(LS_KEY_EGRESOS_PARCIAL)) + 1);
   const campoTotalRef = useRef(null);
+  const campoPasoRef = useRef(null);
+  const campoQuedoRef = useRef(null);
+  // Controla si se ven los 3 campos (Vol.Total/Pasó/Quedó) o el link
+  // "+ Agregar Backster/Suero" dentro de la tabla. Para la primera carga
+  // (lista vacía) siempre se muestran los campos sin necesidad de este
+  // estado — solo entra en juego una vez que ya hay al menos un suero.
+  const [formularioIngresoAbierto, setFormularioIngresoAbierto] = useState(false);
 
   useEffect(() => { guardarEnStorage(LS_KEY_INGRESOS_PARCIAL, ingresosParcial); }, [ingresosParcial]);
   useEffect(() => { guardarEnStorage(LS_KEY_EGRESOS_PARCIAL, egresosParcial); }, [egresosParcial]);
@@ -1735,9 +1744,32 @@ function Balance({ activo }) {
     setCampoPaso("");
     setCampoQuedo("");
     ordenCamposRef.current = ["total", "paso", "quedo"];
-    // Foco automático en "Vol. Total" para cargar el siguiente suero/plan sin
-    // tener que tocar el campo a mano cada vez.
-    campoTotalRef.current?.focus();
+    // Se cierra el formulario después de agregar: vuelve al link "+ Agregar
+    // Backster/Suero" dentro de la tabla, en vez de quedar siempre abierto.
+    setFormularioIngresoAbierto(false);
+  };
+
+  // Navegación con el botón "Siguiente"/"Ir" del teclado nativo (atributo
+  // enterKeyHint — a diferencia del teclado numérico en sí, esto SÍ lo puede
+  // controlar la web, tanto en iOS como Android): Vol. Total -> Pasó ->
+  // Quedó -> Agregar, sin soltar el teclado en ningún momento.
+  const irAPaso = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      campoPasoRef.current?.focus();
+    }
+  };
+  const irAQuedo = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      campoQuedoRef.current?.focus();
+    }
+  };
+  const irAAgregar = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      agregarIngresoParcial();
+    }
   };
 
   // Edición de celda directamente en la tabla: tocás "Pasó" o "Quedó" de una
@@ -1862,7 +1894,7 @@ function Balance({ activo }) {
             Balance Parcial
           </button>
           <button className={`mode-tab ${vista === "total" ? "active" : ""}`} onClick={() => setVista("total")}>
-            Balance Total
+            Balance Total de 24hs
           </button>
         </div>
       </div>
@@ -1951,7 +1983,7 @@ function Balance({ activo }) {
 
           <div className="result-block">
             <div className="result-main">
-              <span className="result-main-value">{balance > 0 ? "+" : ""}{fmtDosis(balance, 2)}</span>
+              <span className={`result-main-value ${balance < 0 ? "balance-resultado-negativo" : ""}`}>{balance > 0 ? "+" : ""}{fmtDosis(balance, 2)}</span>
               <span className="result-main-unit">ml</span>
             </div>
           </div>
@@ -2041,11 +2073,11 @@ function Balance({ activo }) {
             </div>
           )}
 
-          <div className="section-title">Suero infundido</div>
+          <div className="section-title">Suero infundiendo/infundido</div>
           <div className="balance-parcial-form">
-            <Field ref={campoTotalRef} label="Vol. Total" unit="ml" value={campoTotal} onChange={(v) => actualizarCampoParcial("total", v)} />
-            <Field label="Pasó" unit="ml" value={campoPaso} onChange={(v) => actualizarCampoParcial("paso", v)} />
-            <Field label="Quedó" unit="ml" value={campoQuedo} onChange={(v) => actualizarCampoParcial("quedo", v)} />
+            <Field ref={campoTotalRef} label="Vol. Total" unit="ml" value={campoTotal} onChange={(v) => actualizarCampoParcial("total", v)} enterKeyHint="next" onKeyDown={irAPaso} />
+            <Field ref={campoPasoRef} label="Pasó" unit="ml" value={campoPaso} onChange={(v) => actualizarCampoParcial("paso", v)} enterKeyHint="next" onKeyDown={irAQuedo} />
+            <Field ref={campoQuedoRef} label="Quedó" unit="ml" value={campoQuedo} onChange={(v) => actualizarCampoParcial("quedo", v)} enterKeyHint="send" onKeyDown={irAAgregar} />
           </div>
           <button
             type="button"
@@ -2061,7 +2093,7 @@ function Balance({ activo }) {
               Total Ingresos: <strong>{fmtDosis(totalPasoParcial, 2)} ml</strong>
             </div>
             <button type="button" className="balance-enviar-btn balance-enviar-btn-ingreso" onClick={enviarPasoATotal} disabled={botonPasoDeshabilitado}>
-              Enviar a Balance Total
+              Agregar a Balance Total
             </button>
           </div>
 
@@ -2108,7 +2140,7 @@ function Balance({ activo }) {
                 Total Egresos: <strong>{fmtDosis(totalEgresosParcial, 2)} ml</strong>
               </div>
               <button type="button" className="balance-enviar-btn balance-enviar-btn-egreso" onClick={enviarEgresoATotal} disabled={botonEgresoParcialDeshabilitado}>
-                Enviar a Balance Total
+                Agregar a Balance Total
               </button>
             </div>
           )}
@@ -2116,7 +2148,7 @@ function Balance({ activo }) {
           <div className="result-block">
             <div className="balance-resultado-titulo">Total balance parcial</div>
             <div className="result-main">
-              <span className="result-main-value">{balanceParcial > 0 ? "+" : ""}{fmtDosis(balanceParcial, 2)}</span>
+              <span className={`result-main-value ${balanceParcial < 0 ? "balance-resultado-negativo" : ""}`}>{balanceParcial > 0 ? "+" : ""}{fmtDosis(balanceParcial, 2)}</span>
               <span className="result-main-unit">ml</span>
             </div>
           </div>
@@ -3043,6 +3075,9 @@ export default function App() {
           color: var(--accent-green);
           letter-spacing: -0.02em;
         }
+        .result-main-value.balance-resultado-negativo {
+          color: var(--accent-orange);
+        }
         .result-main-unit {
           font-size: 15px;
           color: var(--text-secondary);
@@ -3420,13 +3455,13 @@ export default function App() {
         }
         .balance-subtotal-parcial-texto {
           min-width: 0;
-          font-size: 15px;
+          font-size: 13px;
           font-weight: 600;
           color: var(--text-primary);
         }
         .balance-enviar-btn { flex-shrink: 0; }
         .balance-subtotal-parcial-texto strong {
-          font-size: 19px;
+          font-size: 16px;
           font-variant-numeric: tabular-nums;
         }
         .balance-texto-ingreso, .balance-texto-ingreso strong { color: var(--accent-green-deep); }
@@ -3436,8 +3471,8 @@ export default function App() {
         .balance-enviar-btn {
           background: transparent;
           border-radius: 20px;
-          padding: 8px 14px;
-          font-size: 12px;
+          padding: 6px 10px;
+          font-size: 10.5px;
           font-weight: 700;
           cursor: pointer;
           touch-action: manipulation;
