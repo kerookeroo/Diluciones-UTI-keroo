@@ -1879,7 +1879,7 @@ function Balance({ activo }) {
             Balance Parcial
           </button>
           <button className={`mode-tab ${vista === "total" ? "active" : ""}`} onClick={() => setVista("total")}>
-            Balance Total
+            Balance Total de 24hs
           </button>
         </div>
         {vista === "total" && (ingresos.length > 0 || egresos.length > 0) && (
@@ -3505,7 +3505,7 @@ export default function App() {
           margin-bottom: 18px;
         }
         .balance-toggle-row .mode-tabs { margin-bottom: 0; min-width: 0; flex-shrink: 1; }
-        .balance-toggle-row .mode-tab { font-size: 10.5px; padding: 7px 10px; }
+        .balance-toggle-row .mode-tab { font-size: 11.5px; padding: 8px 11px; }
         .balance-titulo-sin-margen {
           margin: 0;
           padding-top: 0;
