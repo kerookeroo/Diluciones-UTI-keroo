@@ -1876,20 +1876,20 @@ function Balance({ activo }) {
       <div className="balance-toggle-row">
         <div className="mode-tabs">
           <button className={`mode-tab ${vista === "parcial" ? "active" : ""}`} onClick={() => setVista("parcial")}>
-            Balance Parcial
+            Parcial
           </button>
           <button className={`mode-tab ${vista === "total" ? "active" : ""}`} onClick={() => setVista("total")}>
-            Balance Total de 24hs
+            Total
           </button>
         </div>
         {vista === "total" && (ingresos.length > 0 || egresos.length > 0) && (
-          <button type="button" className="balance-reiniciar-inline" onClick={reiniciar}>
-            <RotateCcw size={14} /> Reiniciar
+          <button type="button" className="balance-reiniciar-inline" onClick={reiniciar} aria-label="Reiniciar">
+            <RotateCcw size={16} />
           </button>
         )}
         {vista === "parcial" && (ingresosParcial.length > 0 || egresosParcial.length > 0) && (
-          <button type="button" className="balance-reiniciar-inline" onClick={reiniciarParcial}>
-            <RotateCcw size={14} /> Reiniciar
+          <button type="button" className="balance-reiniciar-inline" onClick={reiniciarParcial} aria-label="Reiniciar">
+            <RotateCcw size={16} />
           </button>
         )}
       </div>
@@ -3522,15 +3522,14 @@ export default function App() {
           flex-shrink: 0;
           display: flex;
           align-items: center;
-          gap: 5px;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
           background: var(--bg-panel);
           border: 1px solid var(--border-panel);
           color: var(--accent-green-deep);
-          border-radius: 20px;
-          padding: 9px 14px;
-          font-size: 12px;
-          font-weight: 600;
-          white-space: nowrap;
+          border-radius: 50%;
+          padding: 0;
           cursor: pointer;
           touch-action: manipulation;
         }
