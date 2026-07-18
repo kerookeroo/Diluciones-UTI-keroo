@@ -2312,6 +2312,18 @@ export default function App() {
   };
 
   const handleTouchStart = (e) => {
+    // Las pastillas de modo (.mode-tabs, ej. Goteo: "ml/h → gotas/min" /
+    // "gotas/min → ml/h" / "Volumen + tiempo") tienen su propio scroll
+    // horizontal nativo cuando no entran todas en el ancho de pantalla. Si
+    // dejamos que este handler también las trackee, compiten por el mismo
+    // gesto: el scroll interno se mueve Y el track de pestañas también,
+    // terminando en un cambio de pestaña no buscado. Si el toque arranca
+    // ahí adentro, no lo trackeamos: que el scroll nativo del navegador lo
+    // resuelva solo, sin interferencia del swipe entre pestañas.
+    if (e.target.closest(".mode-tabs")) {
+      touchStartRef.current = null;
+      return;
+    }
     touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, locked: false };
     setTrack(getOffset(tabRef.current), false);
     showSeam();
