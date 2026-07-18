@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home, Scale, Trash2 } from "lucide-react";
+import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home, Scale, Trash2, Brain } from "lucide-react";
 
 // Escala global de la interfaz para el uso real en el teléfono (todo se veía
 // muy chico en el PWA instalado). Subí o bajá este número para agrandar o
@@ -489,6 +489,11 @@ function Inicio({ tema, toggleTheme, setTab }) {
           <span className="inicio-row-label">Calculadora PAFI (Berlín 2012)</span>
           <ChevronDown size={16} className="inicio-row-chevron" />
         </button>
+        <button type="button" className="inicio-row" onClick={() => setTab("ppc")}>
+          <span className="inicio-row-icon">🧠</span>
+          <span className="inicio-row-label">Calculadora PPC (Presión de Perfusión Cerebral)</span>
+          <ChevronDown size={16} className="inicio-row-chevron" />
+        </button>
         <button type="button" className="inicio-row" onClick={() => setTab("goteo")}>
           <span className="inicio-row-icon">💧</span>
           <span className="inicio-row-label">Cálculo de Goteo / Tiempo</span>
@@ -600,6 +605,79 @@ function PaFi() {
         </div>
         <div className="ref-dosis-texto" style={{ marginTop: 8 }}>
           Esta clasificación asume ventilación con PEEP/CPAP ≥ 5 cmH₂O. Fuente: ARDS Definition Task Force, JAMA 2012 (Definición de Berlín).
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Ppc() {
+  const [tam, setTam] = useState("");
+  const [pic, setPic] = useState("");
+
+  const resultado = useMemo(() => {
+    const tamVal = num(tam);
+    const picVal = num(pic);
+    if (tamVal == null || picVal == null) return null;
+    const ppc = tamVal - picVal;
+
+    let categoria, colorClass;
+    if (ppc < 50) {
+      categoria = "Crítico: riesgo de isquemia cerebral";
+      colorClass = "pafi-severo";
+    } else if (ppc < 60) {
+      categoria = "Por debajo del objetivo: vigilar estrechamente";
+      colorClass = "pafi-moderado";
+    } else if (ppc <= 70) {
+      categoria = "Dentro del objetivo (Brain Trauma Foundation)";
+      colorClass = "pafi-normal";
+    } else {
+      categoria = "Por encima del objetivo: riesgo de SDRA por uso de vasopresores";
+      colorClass = "pafi-leve";
+    }
+
+    return { valor: ppc, categoria, colorClass };
+  }, [tam, pic]);
+
+  return (
+    <div className="panel">
+      <div className="panel-row">
+        <Field label="TAM (tensión arterial media)" unit="mmHg" value={tam} onChange={setTam} placeholder="ej: 85" />
+      </div>
+      <div className="panel-row">
+        <Field label="PIC (presión intracraneana)" unit="mmHg" value={pic} onChange={setPic} placeholder="ej: 15" />
+      </div>
+
+      {resultado ? (
+        <>
+          <div className="result-main">
+            <span className="result-main-value">{fmtDosis(resultado.valor, 0)}</span>
+            <span className="result-main-unit">mmHg (PPC)</span>
+          </div>
+          <div className={`pafi-categoria ${resultado.colorClass}`}>
+            {resultado.categoria}
+          </div>
+        </>
+      ) : (
+        <div className="result-empty">
+          Completá TAM y PIC para calcular la presión de perfusión cerebral.
+        </div>
+      )}
+
+      <div className="ref-dosis">
+        <div className="ref-dosis-titulo">Referencia (Brain Trauma Foundation)</div>
+        <div className="ref-dosis-escenarios">
+          <div className="ref-dosis-escenario">
+            <ul className="ref-dosis-escenario-lista">
+              <li>PPC &lt; 50 mmHg: <strong>crítico</strong>, riesgo de isquemia cerebral</li>
+              <li>PPC 50–59 mmHg: por debajo del objetivo</li>
+              <li>PPC 60–70 mmHg: <strong>dentro del objetivo</strong></li>
+              <li>PPC &gt; 70 mmHg: riesgo de SDRA asociado a vasopresores</li>
+            </ul>
+          </div>
+        </div>
+        <div className="ref-dosis-texto" style={{ marginTop: 8 }}>
+          PPC = TAM − PIC. Fórmula de referencia en TEC grave para guiar el objetivo de tensión arterial según la Brain Trauma Foundation. No reemplaza el protocolo institucional ni el criterio clínico.
         </div>
       </div>
     </div>
@@ -2158,7 +2236,7 @@ function Balance({ activo }) {
   );
 }
 
-const ORDEN_TABS = ["inicio", "diluciones", "balance", "pafi", "goteo"];
+const ORDEN_TABS = ["inicio", "diluciones", "balance", "pafi", "ppc", "goteo"];
 
 // Versiones memoizadas de los paneles. Los 4 están siempre montados (para el
 // swipe), así que sin memo se re-renderizaban TODOS cada vez que App cambiaba
@@ -2171,6 +2249,7 @@ const InicioMemo = React.memo(Inicio);
 const DilucionesMemo = React.memo(Diluciones);
 const GoteoMemo = React.memo(Goteo);
 const PaFiMemo = React.memo(PaFi);
+const PpcMemo = React.memo(Ppc);
 const BalanceMemo = React.memo(Balance);
 
 export default function App() {
@@ -3785,6 +3864,13 @@ export default function App() {
           <div className="tab-panel">
             <div className="tab-panel-scroll">
               <div className="tab-panel-inner">
+                <PpcMemo />
+              </div>
+            </div>
+          </div>
+          <div className="tab-panel">
+            <div className="tab-panel-scroll">
+              <div className="tab-panel-inner">
                 <GoteoMemo />
               </div>
             </div>
@@ -3808,6 +3894,10 @@ export default function App() {
         <button className={`tab-btn ${tab === "pafi" ? "active" : ""}`} onClick={() => cambiarTab("pafi")}>
           <Wind size={20} />
           PaFi
+        </button>
+        <button className={`tab-btn ${tab === "ppc" ? "active" : ""}`} onClick={() => cambiarTab("ppc")}>
+          <Brain size={20} />
+          PPC
         </button>
         <button className={`tab-btn ${tab === "goteo" ? "active" : ""}`} onClick={() => cambiarTab("goteo")}>
           <Droplet size={20} />
