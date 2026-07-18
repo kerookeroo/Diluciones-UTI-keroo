@@ -3419,16 +3419,11 @@ export default function App() {
         }
         .balance-subtotal-parcial-texto {
           min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .balance-enviar-btn { flex-shrink: 0; }
-        .balance-subtotal-parcial-texto {
           font-size: 15px;
           font-weight: 600;
           color: var(--text-primary);
         }
+        .balance-enviar-btn { flex-shrink: 0; }
         .balance-subtotal-parcial-texto strong {
           font-size: 19px;
           font-variant-numeric: tabular-nums;
