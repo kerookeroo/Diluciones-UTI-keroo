@@ -1691,11 +1691,6 @@ function Balance({ activo }) {
   const campoTotalRef = useRef(null);
   const campoPasoRef = useRef(null);
   const campoQuedoRef = useRef(null);
-  // Controla si se ven los 3 campos (Vol.Total/Pasó/Quedó) o el link
-  // "+ Agregar Backster/Suero" dentro de la tabla. Para la primera carga
-  // (lista vacía) siempre se muestran los campos sin necesidad de este
-  // estado — solo entra en juego una vez que ya hay al menos un suero.
-  const [formularioIngresoAbierto, setFormularioIngresoAbierto] = useState(false);
 
   useEffect(() => { guardarEnStorage(LS_KEY_INGRESOS_PARCIAL, ingresosParcial); }, [ingresosParcial]);
   useEffect(() => { guardarEnStorage(LS_KEY_EGRESOS_PARCIAL, egresosParcial); }, [egresosParcial]);
@@ -1744,9 +1739,9 @@ function Balance({ activo }) {
     setCampoPaso("");
     setCampoQuedo("");
     ordenCamposRef.current = ["total", "paso", "quedo"];
-    // Se cierra el formulario después de agregar: vuelve al link "+ Agregar
-    // Backster/Suero" dentro de la tabla, en vez de quedar siempre abierto.
-    setFormularioIngresoAbierto(false);
+    // Foco automático en "Vol. Total" para cargar el siguiente suero/plan sin
+    // tener que tocar el campo a mano cada vez.
+    campoTotalRef.current?.focus();
   };
 
   // Navegación con el botón "Siguiente"/"Ir" del teclado nativo (atributo
