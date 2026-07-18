@@ -1872,17 +1872,7 @@ function Balance({ activo }) {
   };
 
   return (
-    <div className="panel balance-panel-relative">
-      {vista === "total" && (ingresos.length > 0 || egresos.length > 0) && (
-        <button type="button" className="balance-reiniciar-flotante" onClick={reiniciar}>
-          <RotateCcw size={14} /> Reiniciar
-        </button>
-      )}
-      {vista === "parcial" && (ingresosParcial.length > 0 || egresosParcial.length > 0) && (
-        <button type="button" className="balance-reiniciar-flotante" onClick={reiniciarParcial}>
-          <RotateCcw size={14} /> Reiniciar
-        </button>
-      )}
+    <div className="panel">
       <div className="balance-toggle-row">
         <div className="mode-tabs">
           <button className={`mode-tab ${vista === "parcial" ? "active" : ""}`} onClick={() => setVista("parcial")}>
@@ -1892,6 +1882,16 @@ function Balance({ activo }) {
             Balance Total de 24hs
           </button>
         </div>
+        {vista === "total" && (ingresos.length > 0 || egresos.length > 0) && (
+          <button type="button" className="balance-reiniciar-inline" onClick={reiniciar}>
+            <RotateCcw size={14} /> Reiniciar
+          </button>
+        )}
+        {vista === "parcial" && (ingresosParcial.length > 0 || egresosParcial.length > 0) && (
+          <button type="button" className="balance-reiniciar-inline" onClick={reiniciarParcial}>
+            <RotateCcw size={14} /> Reiniciar
+          </button>
+        )}
       </div>
 
       {vista === "total" && (
@@ -3504,7 +3504,7 @@ export default function App() {
           margin-top: 8px;
           margin-bottom: 18px;
         }
-        .balance-toggle-row .mode-tabs { margin-bottom: 0; }
+        .balance-toggle-row .mode-tabs { margin-bottom: 0; min-width: 0; flex-shrink: 1; }
         .balance-titulo-sin-margen {
           margin: 0;
           padding-top: 0;
@@ -3517,12 +3517,9 @@ export default function App() {
         }
         .balance-titulo-ingreso { color: var(--accent-green-deep); }
         .balance-titulo-egreso { color: var(--accent-orange); }
-        .balance-panel-relative { position: relative; }
-        .balance-reiniciar-flotante {
-          position: absolute;
-          top: -4px;
-          right: 4px;
-          z-index: 2;
+        .balance-reiniciar-inline {
+          margin-left: auto;
+          flex-shrink: 0;
           display: flex;
           align-items: center;
           gap: 5px;
@@ -3536,7 +3533,6 @@ export default function App() {
           white-space: nowrap;
           cursor: pointer;
           touch-action: manipulation;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
         }
         .info-note {
           background: var(--box-green-bg);
