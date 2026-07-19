@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home, Scale, Trash2, Brain } from "lucide-react";
+import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home, Scale, Trash2, Brain, Pencil, Plus } from "lucide-react";
 
 // Escala global de la interfaz para el uso real en el teléfono (todo se veía
 // muy chico en el PWA instalado). Subí o bajá este número para agrandar o
@@ -441,7 +441,7 @@ function resaltarDosis(texto) {
   return partes;
 }
 
-const Field = React.forwardRef(function Field({ label, unit, value, onChange, onBlur, onKeyDown, enterKeyHint }, ref) {
+const Field = React.forwardRef(function Field({ label, unit, value, onChange, onBlur, onKeyDown, enterKeyHint, placeholder }, ref) {
   return (
     <label className="field">
       <span className="field-label">{label}</span>
@@ -452,6 +452,7 @@ const Field = React.forwardRef(function Field({ label, unit, value, onChange, on
           type="text"
           inputMode="decimal"
           enterKeyHint={enterKeyHint}
+          placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
@@ -543,9 +544,27 @@ function PaFi() {
     const fio2PctVal = num(fio2Pct);
     if (!pao2Val || pao2Val <= 0 || !fio2PctVal || fio2PctVal <= 0) return null;
     // FiO2 se ingresa en % (ej. 40) y se convierte a decimal (0.4) para
-    // la fórmula clásica PaFi = PaO2 / FiO2(decimal). FiO2 nunca debería
-    // superar 100% (aire ambiente = 21%, oxígeno puro = 100%).
-    const fio2Decimal = Math.min(fio2PctVal, 100) / 100;
+    // la fórmula clásica PaFi = PaO2 / FiO2(decimal).
+    //
+    // Guardia fisiológica: FiO2 nunca puede ser menor a 21% (aire
+    // ambiente) ni mayor a 100% (oxígeno puro). El error típico es tipear
+    // el decimal ("0.4") en vez del porcentaje ("40"): antes eso se
+    // calculaba igual y daba un PaFi absurdo (ej. 20.000) con cartel
+    // "sin criterio de SDRA" — una interpretación clínica falsa mostrada
+    // con total confianza. Ahora, en vez de calcular con un valor
+    // imposible, se corta y se avisa. La Definición de Berlín (JAMA 2012)
+    // asume FiO2 entre 0,21 y 1,0.
+    if (fio2PctVal < 21) {
+      return {
+        error: "La FiO₂ mínima es 21% (aire ambiente). Si tu valor es decimal (ej. 0,4), ingresalo como porcentaje (40).",
+      };
+    }
+    if (fio2PctVal > 100) {
+      return {
+        error: "La FiO₂ máxima es 100% (oxígeno puro). Verificá el valor ingresado.",
+      };
+    }
+    const fio2Decimal = fio2PctVal / 100;
     const pafi = pao2Val / fio2Decimal;
 
     let categoria, colorClass;
@@ -575,7 +594,11 @@ function PaFi() {
         <Field label="FiO₂" unit="%" value={fio2Pct} onChange={setFio2Pct} placeholder="ej: 40" />
       </div>
 
-      {resultado ? (
+      {resultado?.error ? (
+        <div className="result-warning">
+          <AlertCircle size={14} /> {resultado.error}
+        </div>
+      ) : resultado ? (
         <>
           <div className="result-main">
             <span className="result-main-value">{fmtDosis(resultado.valor, 0)}</span>
@@ -621,6 +644,18 @@ function Ppc() {
     if (tamVal == null || picVal == null) return null;
     const ppc = tamVal - picVal;
 
+    // Guardia: una PPC negativa casi siempre significa que se cruzaron
+    // los campos (la PIC tipeada en TAM y viceversa). Antes caía en la
+    // rama "< 50: crítico", que es una interpretación clínica engañosa
+    // para un simple error de carga. La fórmula no cambia: solo se
+    // muestra un aviso específico en vez de una categoría falsa.
+    if (ppc < 0) {
+      return {
+        valor: ppc,
+        error: "El resultado es negativo: verificá que no hayas invertido TAM y PIC. La TAM siempre debe ser mayor que la PIC.",
+      };
+    }
+
     let categoria, colorClass;
     if (ppc < 50) {
       categoria = "Crítico: riesgo de isquemia cerebral";
@@ -648,7 +683,11 @@ function Ppc() {
         <Field label="PIC (presión intracraneana)" unit="mmHg" value={pic} onChange={setPic} placeholder="ej: 15" />
       </div>
 
-      {resultado ? (
+      {resultado?.error ? (
+        <div className="result-warning">
+          <AlertCircle size={14} /> {resultado.error}
+        </div>
+      ) : resultado ? (
         <>
           <div className="result-main">
             <span className="result-main-value">{fmtDosis(resultado.valor, 0)}</span>
@@ -677,7 +716,7 @@ function Ppc() {
           </div>
         </div>
         <div className="ref-dosis-texto" style={{ marginTop: 8 }}>
-          PPC = TAM − PIC. Fórmula de referencia en TEC grave para guiar el objetivo de tensión arterial según la Brain Trauma Foundation. No reemplaza el protocolo institucional ni el criterio clínico.
+          PPC = TAM − PIC. Fórmula de referencia en TEC grave para guiar el objetivo de tensión arterial según la Brain Trauma Foundation. Para que la PPC sea válida, la TAM debe medirse con el transductor en cero a nivel del trago (agujero de Monro), no en el eje flebostático: con cabecera a 30°, medir a nivel del corazón sobreestima la PPC en ~10–15 mmHg. No reemplaza el protocolo institucional ni el criterio clínico.
         </div>
       </div>
     </div>
@@ -1119,7 +1158,12 @@ function Diluciones() {
               if (!e.target.checked) {
                 setNumAmpollas("");
                 setDosisMg("");
-                setVolumenMl("");
+                // Antes quedaba volumenMl vacío pero el select de suero
+                // seguía mostrando "100 ml": la pantalla decía una cosa y
+                // el cálculo usaba otra ("Falta completar: volumen de
+                // suero" con un preset visible). Ahora el volumen vuelve
+                // al valor que el select ya está mostrando.
+                setVolumenMl(presetSuero !== "otro" ? presetSuero : "");
               }
             }}
           />
@@ -1701,7 +1745,21 @@ function mayorIdGuardado(...listas) {
 // era cada volumen. Aritmética pura (suma/resta); la app no interpreta ni
 // opina si el balance resultante es clínicamente adecuado, eso queda a
 // criterio del profesional.
-function Balance({ activo }) {
+function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
+  // Claves de localStorage propias de ESTE paciente. El slot 1 usa sufijo
+  // vacío = las claves originales de siempre: el balance que ya estaba
+  // cargado antes de multi-paciente aparece automáticamente como Paciente 1,
+  // sin migración de datos ni riesgo de perder nada en el deploy. Los slots
+  // 2 y 3 agregan "-p2"/"-p3". El componente se remonta con key={id} al
+  // cambiar de paciente, así estos valores son constantes durante toda la
+  // vida de cada montaje y los useState de abajo inicializan con las claves
+  // correctas.
+  const K_INGRESOS = LS_KEY_INGRESOS + sufijo;
+  const K_EGRESOS = LS_KEY_EGRESOS + sufijo;
+  const K_INGRESOS_PARCIAL = LS_KEY_INGRESOS_PARCIAL + sufijo;
+  const K_EGRESOS_PARCIAL = LS_KEY_EGRESOS_PARCIAL + sufijo;
+  const K_TRANSFERENCIAS = LS_KEY_TRANSFERENCIAS + sufijo;
+
   const [vista, setVista] = useState("parcial"); // "total" | "parcial"
 
   // Balance queda siempre montado en memoria (para el swipe entre pestañas),
@@ -1716,14 +1774,14 @@ function Balance({ activo }) {
   }, [activo]);
 
   // --- Balance Total (sin cambios respecto a como ya funcionaba) ---
-  const [ingresos, setIngresos] = useState(() => leerListaGuardada(LS_KEY_INGRESOS)); // [{ id, valor }]
-  const [egresos, setEgresos] = useState(() => leerListaGuardada(LS_KEY_EGRESOS));
+  const [ingresos, setIngresos] = useState(() => leerListaGuardada(K_INGRESOS)); // [{ id, valor }]
+  const [egresos, setEgresos] = useState(() => leerListaGuardada(K_EGRESOS));
   const [tipo, setTipo] = useState("ingreso"); // "ingreso" | "egreso"
   const [valor, setValor] = useState("");
-  const idRef = useRef(mayorIdGuardado(leerListaGuardada(LS_KEY_INGRESOS), leerListaGuardada(LS_KEY_EGRESOS)) + 1);
+  const idRef = useRef(mayorIdGuardado(leerListaGuardada(K_INGRESOS), leerListaGuardada(K_EGRESOS)) + 1);
 
-  useEffect(() => { guardarEnStorage(LS_KEY_INGRESOS, ingresos); }, [ingresos]);
-  useEffect(() => { guardarEnStorage(LS_KEY_EGRESOS, egresos); }, [egresos]);
+  useEffect(() => { guardarEnStorage(K_INGRESOS, ingresos); }, [ingresos]);
+  useEffect(() => { guardarEnStorage(K_EGRESOS, egresos); }, [egresos]);
 
   const agregar = () => {
     const n = num(valor);
@@ -1740,6 +1798,11 @@ function Balance({ activo }) {
   };
 
   const reiniciar = () => {
+    // Con multi-paciente, un reset equivocado ya no borra "el balance":
+    // borra el turno entero de UN paciente. La confirmación nombra al
+    // paciente para que el error de contexto (creer que estás en otra cama)
+    // se detecte antes de destruir datos.
+    if (!window.confirm(`¿Reiniciar el Balance Total de ${labelPaciente}? Se borran sus ingresos y egresos cargados.`)) return;
     setIngresos([]);
     setEgresos([]);
   };
@@ -1759,19 +1822,19 @@ function Balance({ activo }) {
   // número que importa para el balance del turno es la suma de "Pasó" (lo
   // que efectivamente se infundió); "Quedó" es la referencia que se le pasa
   // al turno siguiente, no se sube a ningún total.
-  const [ingresosParcial, setIngresosParcial] = useState(() => leerListaGuardada(LS_KEY_INGRESOS_PARCIAL)); // [{ id, total, paso, quedo }]
-  const [egresosParcial, setEgresosParcial] = useState(() => leerListaGuardada(LS_KEY_EGRESOS_PARCIAL)); // [{ id, valor }] — igual que Balance Total
+  const [ingresosParcial, setIngresosParcial] = useState(() => leerListaGuardada(K_INGRESOS_PARCIAL)); // [{ id, total, paso, quedo }]
+  const [egresosParcial, setEgresosParcial] = useState(() => leerListaGuardada(K_EGRESOS_PARCIAL)); // [{ id, valor }] — igual que Balance Total
   const [campoTotal, setCampoTotal] = useState("");
   const [campoPaso, setCampoPaso] = useState("");
   const [campoQuedo, setCampoQuedo] = useState("");
   const [valorEgresoParcial, setValorEgresoParcial] = useState("");
-  const idParcialRef = useRef(mayorIdGuardado(leerListaGuardada(LS_KEY_INGRESOS_PARCIAL), leerListaGuardada(LS_KEY_EGRESOS_PARCIAL)) + 1);
+  const idParcialRef = useRef(mayorIdGuardado(leerListaGuardada(K_INGRESOS_PARCIAL), leerListaGuardada(K_EGRESOS_PARCIAL)) + 1);
   const campoTotalRef = useRef(null);
   const campoPasoRef = useRef(null);
   const campoQuedoRef = useRef(null);
 
-  useEffect(() => { guardarEnStorage(LS_KEY_INGRESOS_PARCIAL, ingresosParcial); }, [ingresosParcial]);
-  useEffect(() => { guardarEnStorage(LS_KEY_EGRESOS_PARCIAL, egresosParcial); }, [egresosParcial]);
+  useEffect(() => { guardarEnStorage(K_INGRESOS_PARCIAL, ingresosParcial); }, [ingresosParcial]);
+  useEffect(() => { guardarEnStorage(K_EGRESOS_PARCIAL, egresosParcial); }, [egresosParcial]);
 
   // Orden de edición de los 3 campos (más reciente primero). Cada vez que se
   // tipea uno, se recalcula el que quedó último en esta lista — así "los dos
@@ -1890,6 +1953,7 @@ function Balance({ activo }) {
   };
 
   const reiniciarParcial = () => {
+    if (!window.confirm(`¿Reiniciar el Balance Parcial de ${labelPaciente}? Se borran sus sueros y egresos del turno.`)) return;
     setIngresosParcial([]);
     setEgresosParcial([]);
   };
@@ -1906,13 +1970,13 @@ function Balance({ activo }) {
   // botón se deshabilita mientras el subtotal no cambie desde el último
   // envío, y se reactiva solo si se agrega/quita un ítem de la lista (o si
   // la entrada enviada ya no existe en Balance Total).
-  const [idTransferidoIngreso, setIdTransferidoIngreso] = useState(() => leerObjetoGuardado(LS_KEY_TRANSFERENCIAS).idTransferidoIngreso ?? null);
-  const [idTransferidoEgreso, setIdTransferidoEgreso] = useState(() => leerObjetoGuardado(LS_KEY_TRANSFERENCIAS).idTransferidoEgreso ?? null);
-  const [ultimoPasoEnviado, setUltimoPasoEnviado] = useState(() => leerObjetoGuardado(LS_KEY_TRANSFERENCIAS).ultimoPasoEnviado ?? null);
-  const [ultimoEgresoEnviado, setUltimoEgresoEnviado] = useState(() => leerObjetoGuardado(LS_KEY_TRANSFERENCIAS).ultimoEgresoEnviado ?? null);
+  const [idTransferidoIngreso, setIdTransferidoIngreso] = useState(() => leerObjetoGuardado(K_TRANSFERENCIAS).idTransferidoIngreso ?? null);
+  const [idTransferidoEgreso, setIdTransferidoEgreso] = useState(() => leerObjetoGuardado(K_TRANSFERENCIAS).idTransferidoEgreso ?? null);
+  const [ultimoPasoEnviado, setUltimoPasoEnviado] = useState(() => leerObjetoGuardado(K_TRANSFERENCIAS).ultimoPasoEnviado ?? null);
+  const [ultimoEgresoEnviado, setUltimoEgresoEnviado] = useState(() => leerObjetoGuardado(K_TRANSFERENCIAS).ultimoEgresoEnviado ?? null);
 
   useEffect(() => {
-    guardarEnStorage(LS_KEY_TRANSFERENCIAS, {
+    guardarEnStorage(K_TRANSFERENCIAS, {
       idTransferidoIngreso,
       idTransferidoEgreso,
       ultimoPasoEnviado,
@@ -1951,6 +2015,7 @@ function Balance({ activo }) {
 
   return (
     <div className="panel">
+      {cabecera}
       <div className="balance-toggle-row">
         <div className="mode-tabs">
           <button className={`mode-tab ${vista === "parcial" ? "active" : ""}`} onClick={() => setVista("parcial")}>
@@ -2245,6 +2310,132 @@ const ORDEN_TABS = ["inicio", "diluciones", "balance", "pafi", "ppc", "goteo"];
 // nunca por culpa del padre (su estado interno sigue funcionando igual). Inicio
 // solo se re-renderiza si cambia `tema` (sus callbacks van con useCallback).
 // No se toca nada de la lógica de cálculo: es puramente de renderizado.
+// --- Multi-paciente para Balance ---
+// En UTI un enfermero lleva como máximo 2-3 pacientes. Cada slot tiene sus
+// propias claves de localStorage (ver sufijos en BalancePaciente) y su
+// propio label editable (default "Paciente N"; la idea es poner la cama,
+// ej. "Cama 5" — NUNCA nombre ni historia clínica: esto corre en un
+// teléfono personal con storage sin cifrar, y cargar datos identificatorios
+// de salud ahí entra en terreno de la Ley 25.326 de protección de datos).
+// El contexto de paciente aplica SOLO a Balance: Diluciones, PaFi y PPC son
+// calculadoras sin estado persistido y darles "paciente" crearía la falsa
+// sensación de que guardan algo por paciente cuando no es así.
+const LS_KEY_PACIENTES = "diluciones-uti-balance-pacientes";
+const MAX_PACIENTES = 3;
+
+function leerPacientesGuardados() {
+  const obj = leerObjetoGuardado(LS_KEY_PACIENTES);
+  const slotsValidos = Array.isArray(obj.slots)
+    ? obj.slots.filter((s) => s && typeof s.id === "number" && s.id >= 1 && s.id <= MAX_PACIENTES && typeof s.label === "string").slice(0, MAX_PACIENTES)
+    : [];
+  const slots = slotsValidos.length > 0 ? slotsValidos : [{ id: 1, label: "Paciente 1" }];
+  const activoId = slots.some((s) => s.id === obj.activoId) ? obj.activoId : slots[0].id;
+  return { slots, activoId };
+}
+
+function Balance({ activo }) {
+  const [pacientes, setPacientes] = useState(() => leerPacientesGuardados());
+  const [editandoLabel, setEditandoLabel] = useState(false);
+  const [labelDraft, setLabelDraft] = useState("");
+
+  useEffect(() => { guardarEnStorage(LS_KEY_PACIENTES, pacientes); }, [pacientes]);
+
+  const slotActivo = pacientes.slots.find((s) => s.id === pacientes.activoId) || pacientes.slots[0];
+  const sufijoDe = (id) => (id === 1 ? "" : `-p${id}`);
+
+  const seleccionarPaciente = (id) => {
+    if (id === pacientes.activoId) return;
+    setEditandoLabel(false);
+    setPacientes((p) => ({ ...p, activoId: id }));
+  };
+
+  const agregarPaciente = () => {
+    setEditandoLabel(false);
+    setPacientes((p) => {
+      if (p.slots.length >= MAX_PACIENTES) return p;
+      const nuevoId = Math.max(...p.slots.map((s) => s.id)) + 1;
+      if (nuevoId > MAX_PACIENTES) return p;
+      return { slots: [...p.slots, { id: nuevoId, label: `Paciente ${nuevoId}` }], activoId: nuevoId };
+    });
+  };
+
+  // Tocar la pestaña YA activa abre la edición del label ahí mismo (input
+  // inline). Enter o tocar afuera confirma; Escape cancela; vacío no pisa.
+  const iniciarEdicionLabel = () => {
+    setLabelDraft(slotActivo.label);
+    setEditandoLabel(true);
+  };
+
+  const confirmarLabel = () => {
+    const limpio = labelDraft.trim().slice(0, 14);
+    if (limpio) {
+      setPacientes((p) => ({
+        ...p,
+        slots: p.slots.map((s) => (s.id === slotActivo.id ? { ...s, label: limpio } : s)),
+      }));
+    }
+    setEditandoLabel(false);
+  };
+
+  const cabecera = (
+    <div className="paciente-tabs">
+      {pacientes.slots.map((s) => {
+        const esActivo = s.id === pacientes.activoId;
+        if (esActivo && editandoLabel) {
+          return (
+            <input
+              key={s.id}
+              className="paciente-tab-edit"
+              type="text"
+              value={labelDraft}
+              maxLength={14}
+              autoFocus
+              enterKeyHint="done"
+              onChange={(e) => setLabelDraft(e.target.value)}
+              onBlur={confirmarLabel}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); confirmarLabel(); }
+                if (e.key === "Escape") setEditandoLabel(false);
+              }}
+            />
+          );
+        }
+        return (
+          <button
+            key={s.id}
+            type="button"
+            className={`paciente-tab ${esActivo ? "active" : ""}`}
+            onClick={() => (esActivo ? iniciarEdicionLabel() : seleccionarPaciente(s.id))}
+          >
+            <span>{s.label}</span>
+            {esActivo && <Pencil size={12} strokeWidth={2.2} />}
+          </button>
+        );
+      })}
+      {pacientes.slots.length < MAX_PACIENTES && (
+        <button type="button" className="paciente-tab paciente-tab-agregar" onClick={agregarPaciente} aria-label="Agregar paciente">
+          <Plus size={15} strokeWidth={2.4} />
+        </button>
+      )}
+    </div>
+  );
+
+  // key={slotActivo.id}: al cambiar de paciente, BalancePaciente se
+  // desmonta y remonta completo, con lo cual TODOS sus useState vuelven a
+  // inicializar leyendo las claves de localStorage del paciente nuevo. Es
+  // el mecanismo estándar de React para "misma UI, otro contexto de datos",
+  // y evita tener que tocar una sola línea de la lógica interna de Balance.
+  return (
+    <BalancePaciente
+      key={slotActivo.id}
+      activo={activo}
+      sufijo={sufijoDe(slotActivo.id)}
+      labelPaciente={slotActivo.label}
+      cabecera={cabecera}
+    />
+  );
+}
+
 const InicioMemo = React.memo(Inicio);
 const DilucionesMemo = React.memo(Diluciones);
 const GoteoMemo = React.memo(Goteo);
@@ -2394,7 +2585,7 @@ export default function App() {
     // terminando en un cambio de pestaña no buscado. Si el toque arranca
     // ahí adentro, no lo trackeamos: que el scroll nativo del navegador lo
     // resuelva solo, sin interferencia del swipe entre pestañas.
-    if (e.target.closest(".mode-tabs")) {
+    if (e.target.closest(".mode-tabs") || e.target.closest(".paciente-tabs")) {
       touchStartRef.current = null;
       return;
     }
@@ -3585,6 +3776,53 @@ export default function App() {
         }
         .balance-toggle-row .mode-tabs { margin-bottom: 0; min-width: 0; flex-shrink: 1; }
         .balance-toggle-row .mode-tab { font-size: 11.5px; padding: 8px 11px; }
+        .paciente-tabs {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+          overflow-x: auto;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .paciente-tabs::-webkit-scrollbar { display: none; }
+        .paciente-tab {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: var(--bg-panel-alt);
+          border: 1.5px solid var(--border-panel);
+          color: var(--text-secondary);
+          font-size: 12.5px;
+          font-weight: 700;
+          padding: 8px 13px;
+          border-radius: 999px;
+          white-space: nowrap;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+        .paciente-tab.active {
+          background: var(--box-green-bg);
+          border-color: var(--accent-green);
+          color: var(--accent-green);
+        }
+        .paciente-tab-agregar {
+          border-style: dashed;
+          color: var(--text-tertiary);
+          padding: 8px 11px;
+        }
+        .paciente-tab-edit {
+          width: 128px;
+          background: var(--bg-panel);
+          border: 1.5px solid var(--accent-green);
+          border-radius: 999px;
+          padding: 7px 13px;
+          font-size: 12.5px;
+          font-weight: 700;
+          color: var(--text-primary);
+          outline: none;
+          flex-shrink: 0;
+        }
         .balance-titulo-sin-margen {
           margin: 0;
           padding-top: 0;
