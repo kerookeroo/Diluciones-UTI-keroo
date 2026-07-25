@@ -2413,12 +2413,14 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                   type="button"
                   className={`tipo-chip tipo-color-${t.color} ${activo ? "active" : ""}`}
                   aria-pressed={activo}
-                  title={t.nombre}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setTipoParcial(activo ? null : t.id)}
                 >
                   <Icono size={19} />
-                  <span>{t.label}</span>
+                  <span className="tipo-chip-textos">
+                    <span className="tipo-chip-sigla">{t.label}</span>
+                    <span className="tipo-chip-nombre">{t.nombre}</span>
+                  </span>
                 </button>
               );
             })}
@@ -2801,7 +2803,7 @@ export default function App() {
     // terminando en un cambio de pestaña no buscado. Si el toque arranca
     // ahí adentro, no lo trackeamos: que el scroll nativo del navegador lo
     // resuelva solo, sin interferencia del swipe entre pestañas.
-    if (e.target.closest(".mode-tabs") || e.target.closest(".paciente-tabs")) {
+    if (e.target.closest(".mode-tabs") || e.target.closest(".paciente-tabs") || e.target.closest(".tipo-chips")) {
       touchStartRef.current = null;
       return;
     }
@@ -3953,33 +3955,52 @@ export default function App() {
            horizontal desplazable, 1 tap para elegir (el camino frecuente).
            Volver a tocar el chip activo lo deselecciona. */
         .tipo-chips {
-          display: grid;
-          grid-template-columns: repeat(7, 1fr);
-          gap: 4px;
+          display: flex;
+          align-items: stretch;
+          border: 1px solid var(--border-panel);
+          border-radius: 14px;
+          background: var(--bg-panel-alt);
+          overflow-x: auto;
           margin-bottom: 8px;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
         }
+        .tipo-chips::-webkit-scrollbar { display: none; }
         .tipo-chip {
           display: flex;
-          flex-direction: column;
           align-items: center;
-          justify-content: center;
-          gap: 2px;
-          min-width: 0;
-          background: var(--bg-panel-alt);
-          border: 1.5px solid var(--border-panel);
-          border-radius: 10px;
-          padding: 6px 1px;
-          font-size: 10.5px;
-          font-weight: 800;
-          letter-spacing: -0.01em;
+          gap: 8px;
+          flex-shrink: 0;
+          background: transparent;
+          border: none;
+          border-right: 1px solid var(--border-panel);
+          padding: 10px 14px;
           cursor: pointer;
           touch-action: manipulation;
-          opacity: 0.7;
+          opacity: 0.6;
         }
+        .tipo-chip:last-child { border-right: none; }
         .tipo-chip.active {
-          border-color: currentColor;
           background: var(--bg-panel);
           opacity: 1;
+        }
+        .tipo-chip-textos {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          line-height: 1.2;
+        }
+        .tipo-chip-sigla {
+          font-size: 12px;
+          font-weight: 800;
+          letter-spacing: -0.01em;
+          white-space: nowrap;
+        }
+        .tipo-chip-nombre {
+          font-size: 9.5px;
+          font-weight: 500;
+          color: var(--text-tertiary);
+          white-space: nowrap;
         }
         /* Hoja de selección para cambiar el tipo de una fila ya cargada.
            Muestra el nombre completo además de la sigla: es donde se
