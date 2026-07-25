@@ -2416,7 +2416,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setTipoParcial(activo ? null : t.id)}
                 >
-                  <Icono size={19} />
+                  <Icono size={15} />
                   <span className="tipo-chip-textos">
                     <span className="tipo-chip-sigla">{t.label}</span>
                     <span className="tipo-chip-nombre">{t.nombre}</span>
@@ -3951,21 +3951,24 @@ export default function App() {
         .balance-tabla-fila > div.tipo-color-verde { color: var(--accent-green); }
         .balance-tabla-fila > div.tipo-color-naranja { color: var(--accent-orange); }
         .balance-tabla-fila > div.tipo-color-rojo { color: var(--accent-red); }
-        /* Chips de selección de tipo en el formulario de carga: grid fijo de
-           2 columnas, todo visible de una sin scroll horizontal ni swipe.
-           Simple a propósito: sin bordes ni fondos de color por ítem, solo
-           el ícono (que ya lleva su color propio) y el texto. 1 tap para
-           elegir; volver a tocar el chip activo lo deselecciona. */
+        /* Chips de selección de tipo en el formulario de carga: las 7 en una
+           sola fila, todas visibles de una sin scroll horizontal ni swipe.
+           Cada columna es angosta a propósito (el nombre completo envuelve
+           en varias líneas adentro suyo) para que entren las 7 juntas.
+           Simple: sin bordes ni fondos de color por ítem, solo el ícono
+           (que ya lleva su color propio) y el texto. 1 tap para elegir;
+           volver a tocar el chip activo lo deselecciona. */
         .tipo-chips {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px 14px;
+          display: flex;
+          gap: 4px;
           margin-bottom: 10px;
         }
         .tipo-chip {
           display: flex;
-          align-items: center;
-          gap: 8px;
+          align-items: flex-start;
+          gap: 3px;
+          flex: 1 1 0;
+          min-width: 0;
           background: none;
           border: none;
           padding: 2px 0;
@@ -3974,6 +3977,9 @@ export default function App() {
           opacity: 0.55;
           text-align: left;
         }
+        .tipo-chip svg {
+          flex-shrink: 0;
+        }
         .tipo-chip.active {
           opacity: 1;
         }
@@ -3981,19 +3987,21 @@ export default function App() {
           display: flex;
           flex-direction: column;
           align-items: flex-start;
-          line-height: 1.2;
+          line-height: 1.15;
+          min-width: 0;
         }
         .tipo-chip-sigla {
-          font-size: 12px;
+          font-size: 9.5px;
           font-weight: 800;
           letter-spacing: -0.01em;
           white-space: nowrap;
         }
         .tipo-chip-nombre {
-          font-size: 9.5px;
+          font-size: 6.8px;
           font-weight: 500;
           color: var(--text-tertiary);
-          white-space: nowrap;
+          white-space: normal;
+          word-break: break-word;
         }
         /* Hoja de selección para cambiar el tipo de una fila ya cargada.
            Muestra el nombre completo además de la sigla: es donde se
