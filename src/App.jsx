@@ -1949,29 +1949,33 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
   };
 
   const agregarIngresoParcial = () => {
-    const nPaso = num(campoPaso);
-    // "Pasó" es lo único obligatorio: es el volumen que realmente entró al
-    // paciente y lo que suma el balance. Vol. Total y Quedó son opcionales.
-    if (nPaso == null) {
-      setAvisoParcial("Completá cuánto pasó.");
+    let nTotal = num(campoTotal);
+    let nPaso = num(campoPaso);
+    let nQuedo = num(campoQuedo);
+
+    // Alcanza con Total O Pasó para agregar la fila — son dos formas válidas
+    // de cargar un suero: "recién lo cuelgo, todavía no pasó nada" (solo
+    // Total, se completa Pasó/Quedó después tocando la celda) o "esto ya
+    // pasó del todo" (solo Pasó, ej. VO/sonda/ATB 100 en 100). Solo se
+    // bloquea si no hay ningún dato con qué agregar la fila.
+    if (nTotal == null && nPaso == null) {
+      setAvisoParcial("Completá el Vol. Total o cuánto pasó.");
       return;
     }
 
-    let nTotal = num(campoTotal);
-    let nQuedo = num(campoQuedo);
-
-    // Autocompletado del Total: si no lo cargaste, la regla clínica es que
-    // pasó todo lo que había (VO, sonda, ATB 100/100...). No es la app
-    // "inventando" un volumen: al no declarar que quedó algo, el total ES lo
-    // que pasó. El dato que entra al balance ("Pasó") sigue siendo el que
-    // tipeó el usuario; solo se deriva el Total, que en ese caso coincide.
-    if (nTotal == null) {
+    // Autocompletado del Total: si cargaste Pasó pero no Total, la regla
+    // clínica es que pasó todo lo que había (VO, sonda, ATB 100/100...). No
+    // es la app "inventando" un volumen: al no declarar que quedó algo, el
+    // total ES lo que pasó. El dato que entra al balance ("Pasó") sigue
+    // siendo el que tipeó el usuario; solo se deriva el Total, que en ese
+    // caso coincide.
+    if (nTotal == null && nPaso != null) {
       nTotal = nPaso;
       if (nQuedo == null) nQuedo = 0;
     }
 
     // Guardia: Pasó no puede superar el volumen total declarado.
-    if (nQuedo == null && nTotal != null && nPaso > nTotal + 0.001) {
+    if (nPaso != null && nTotal != null && nPaso > nTotal + 0.001) {
       setAvisoParcial("Pasó no puede ser mayor al Vol. Total.");
       return;
     }
