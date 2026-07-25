@@ -2057,6 +2057,23 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
   // conviene desambiguar PHP de IEC sin depender de recordar la abreviatura.
   const [filaEligiendoTipo, setFilaEligiendoTipo] = useState(null); // id | null
 
+  // Cierre al tocar fuera del dropdown. Antes esto lo hacía un overlay con
+  // position:fixed, pero el transform del track de pestañas rompe el fixed
+  // (queda acotado al área del track, no a toda la pantalla), así que un tap
+  // más allá de esa zona no cerraba. Un listener global de pointerdown sí
+  // ve todos los toques: si el toque no cae dentro de la lista abierta ni
+  // sobre la celda que la disparó, se cierra.
+  useEffect(() => {
+    if (filaEligiendoTipo == null) return;
+    const alTocarFuera = (e) => {
+      if (e.target.closest(".tipo-dropdown-list") || e.target.closest(".tipo-abierto")) return;
+      setFilaEligiendoTipo(null);
+    };
+    // captura=true para verlo antes que cualquier stopPropagation interno.
+    document.addEventListener("pointerdown", alTocarFuera, true);
+    return () => document.removeEventListener("pointerdown", alTocarFuera, true);
+  }, [filaEligiendoTipo]);
+
   const asignarTipoAFila = (id, tipoId) => {
     setIngresosParcial((arr) => arr.map((it) => (it.id === id ? { ...it, tipo: tipoId } : it)));
     setFilaEligiendoTipo(null);
@@ -2274,16 +2291,13 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                   <div
                     role="button"
                     tabIndex={0}
-                    className={`balance-tabla-col-tipo ${it.tipo ? `tipo-color-${TIPOS_INGRESO_POR_ID[it.tipo]?.color}` : "balance-tabla-col-vacia"}`}
-                    onClick={() => setFilaEligiendoTipo(it.id)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setFilaEligiendoTipo(it.id); }}
+                    className={`balance-tabla-col-tipo ${filaEligiendoTipo === it.id ? "tipo-abierto" : ""} ${it.tipo ? `tipo-color-${TIPOS_INGRESO_POR_ID[it.tipo]?.color}` : "balance-tabla-col-tipo-vacia"}`}
+                    onClick={() => setFilaEligiendoTipo(filaEligiendoTipo === it.id ? null : it.id)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setFilaEligiendoTipo(filaEligiendoTipo === it.id ? null : it.id); }}
                   >
                     {(() => {
-                      // Filas cargadas antes de que existiera esta columna no
-                      // tienen tipo: se muestran con guion y se pueden
-                      // etiquetar tocándolas, sin perder ningún dato.
                       const def = it.tipo ? TIPOS_INGRESO_POR_ID[it.tipo] : null;
-                      if (!def) return "—";
+                      if (!def) return <Plus size={16} strokeWidth={2.4} />;
                       const { Icono } = def;
                       return (
                         <>
@@ -2292,6 +2306,33 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                         </>
                       );
                     })()}
+                    {filaEligiendoTipo === it.id && (
+                      <div className="tipo-dropdown-list" onClick={(e) => e.stopPropagation()}>
+                        <div className="tipo-dropdown-scroll">
+                            {TIPOS_INGRESO.map((t) => {
+                              const { Icono } = t;
+                              return (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  className={`tipo-dropdown-item tipo-color-${t.color} ${it.tipo === t.id ? "activo" : ""}`}
+                                  onClick={() => asignarTipoAFila(it.id, t.id)}
+                                >
+                                  <Icono size={20} />
+                                  <span className="tipo-dropdown-sigla">{t.label}</span>
+                                </button>
+                              );
+                            })}
+                            <button
+                              type="button"
+                              className="tipo-dropdown-item tipo-dropdown-quitar"
+                              onClick={() => asignarTipoAFila(it.id, null)}
+                            >
+                              <span className="tipo-dropdown-sigla">—</span>
+                            </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div>{fmtDosis(it.total, 2)}</div>
@@ -2354,36 +2395,6 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-
-          {filaEligiendoTipo != null && (
-            <div className="tipo-sheet-backdrop" onClick={() => setFilaEligiendoTipo(null)}>
-              <div className="tipo-sheet" onClick={(e) => e.stopPropagation()}>
-                <div className="tipo-sheet-titulo">Tipo de ingreso</div>
-                {TIPOS_INGRESO.map((t) => {
-                  const { Icono } = t;
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      className={`tipo-sheet-opcion tipo-color-${t.color}`}
-                      onClick={() => asignarTipoAFila(filaEligiendoTipo, t.id)}
-                    >
-                      <Icono size={21} />
-                      <span className="tipo-sheet-sigla">{t.label}</span>
-                      <span className="tipo-sheet-nombre">{t.nombre}</span>
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  className="tipo-sheet-opcion tipo-sheet-quitar"
-                  onClick={() => asignarTipoAFila(filaEligiendoTipo, null)}
-                >
-                  <span className="tipo-sheet-nombre">Sin tipo</span>
-                </button>
-              </div>
             </div>
           )}
 
@@ -3104,6 +3115,7 @@ export default function App() {
           height: 100%;
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
+          position: relative;
         }
         /* Divisor en la costura entre paneles: hairline central + sombra
            difuminada simétrica. Solo visible mientras se hace swipe o hay
@@ -3827,9 +3839,24 @@ export default function App() {
         .balance-tabla-parcial {
           border: 1px solid var(--border-panel);
           border-radius: 12px;
-          overflow: hidden;
           margin-bottom: 11px;
         }
+        /* Sin overflow:hidden para que el dropdown de tipo pueda desbordar la
+           tabla. El redondeo de esquinas se consigue redondeando el header
+           (arriba) y la última fila (abajo) en su lugar. */
+        .balance-tabla-header {
+          border-top-left-radius: 12px;
+          border-top-right-radius: 12px;
+        }
+        .balance-tabla-fila:last-child {
+          border-bottom-left-radius: 12px;
+          border-bottom-right-radius: 12px;
+        }
+        /* La fila cuya celda de tipo tiene el dropdown abierto se eleva para
+           que la lista no quede tapada por las filas de abajo. La clase en la
+           celda es el respaldo para Safari sin :has(). */
+        .balance-tabla-fila:has(.tipo-dropdown-list) { position: relative; z-index: 60; }
+        .balance-tabla-fila > div.balance-tabla-col-tipo.tipo-abierto { z-index: 60; }
         .balance-tabla-header, .balance-tabla-fila {
           display: grid;
           grid-template-columns: 0.85fr 1.15fr 1fr 1fr 34px;
@@ -3891,8 +3918,20 @@ export default function App() {
           cursor: pointer;
           touch-action: manipulation;
           padding: 3px 2px;
+          position: relative;
         }
         .balance-tipo-sigla { line-height: 1; }
+        .balance-tabla-fila > div.balance-tabla-col-tipo-vacia {
+          color: var(--text-quaternary);
+          cursor: pointer;
+          touch-action: manipulation;
+        }
+        .balance-tabla-fila > div.balance-tabla-col-tipo-vacia > svg {
+          border: 1.5px dashed var(--border-panel-strong, var(--border-panel));
+          border-radius: 7px;
+          padding: 3px;
+          box-sizing: content-box;
+        }
         .tipo-color-azul { color: var(--accent-blue); }
         .tipo-color-violeta { color: var(--accent-violet); }
         .tipo-color-verde { color: var(--accent-green); }
@@ -3941,62 +3980,54 @@ export default function App() {
         /* Hoja de selección para cambiar el tipo de una fila ya cargada.
            Muestra el nombre completo además de la sigla: es donde se
            desambigua PHP de IEC sin depender de la memoria. */
-        .tipo-sheet-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.45);
-          z-index: 200;
-          display: flex;
-          align-items: flex-end;
-          justify-content: center;
-        }
-        .tipo-sheet {
-          width: 100%;
-          max-width: 520px;
+        /* Dropdown de tipo anclado a la celda, mismo patrón que el
+           dropdown de drogas de Diluciones: overlay fijo transparente que
+           cierra al tocar afuera + lista absolute colgando de la celda. Se
+           usa absolute (no fixed) para que respete el transform del track de
+           pestañas — con fixed quedaba fuera de vista. */
+        .tipo-dropdown-list {
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          min-width: 116px;
           background: var(--bg-panel);
-          border-top-left-radius: 18px;
-          border-top-right-radius: 18px;
           border: 1px solid var(--border-panel);
-          padding: 14px 12px calc(18px + env(safe-area-inset-bottom));
-          max-height: 80vh;
+          border-radius: 14px;
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+          z-index: 50;
+          overflow: hidden;
+        }
+        .tipo-dropdown-scroll {
+          max-height: 320px;
           overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          padding: 5px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
         }
-        .tipo-sheet-titulo {
-          font-size: 12px;
-          font-weight: 700;
-          color: var(--text-secondary);
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-          margin-bottom: 10px;
-          padding-left: 4px;
-        }
-        .tipo-sheet-opcion {
+        .tipo-dropdown-item {
           display: flex;
           align-items: center;
           gap: 10px;
           width: 100%;
-          background: var(--bg-panel-alt);
-          border: 1px solid var(--border-panel);
-          border-radius: 12px;
-          padding: 12px 13px;
-          margin-bottom: 7px;
+          background: transparent;
+          border: none;
+          border-radius: 9px;
+          padding: 9px 12px;
+          font-family: inherit;
           cursor: pointer;
           touch-action: manipulation;
           text-align: left;
         }
-        .tipo-sheet-sigla {
-          font-size: 14px;
+        .tipo-dropdown-item:active { background: var(--bg-panel-alt); }
+        .tipo-dropdown-item.activo { background: var(--box-green-bg); }
+        .tipo-dropdown-sigla {
+          font-size: 14.5px;
           font-weight: 800;
-          min-width: 34px;
         }
-        .tipo-sheet-nombre {
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--text-primary);
-        }
-        .tipo-sheet-quitar { justify-content: center; }
-        .tipo-sheet-quitar .tipo-sheet-nombre { color: var(--text-secondary); }
-        .balance-tabla-input {
+        .tipo-dropdown-quitar { justify-content: center; }
+        .tipo-dropdown-quitar .tipo-dropdown-sigla { color: var(--text-tertiary); font-weight: 700; }        .balance-tabla-input {
           width: 100%;
           height: 100%;
           border: none;
