@@ -2803,7 +2803,7 @@ export default function App() {
     // terminando en un cambio de pestaña no buscado. Si el toque arranca
     // ahí adentro, no lo trackeamos: que el scroll nativo del navegador lo
     // resuelva solo, sin interferencia del swipe entre pestañas.
-    if (e.target.closest(".mode-tabs") || e.target.closest(".paciente-tabs") || e.target.closest(".tipo-chips")) {
+    if (e.target.closest(".mode-tabs") || e.target.closest(".paciente-tabs")) {
       touchStartRef.current = null;
       return;
     }
@@ -3951,37 +3951,30 @@ export default function App() {
         .balance-tabla-fila > div.tipo-color-verde { color: var(--accent-green); }
         .balance-tabla-fila > div.tipo-color-naranja { color: var(--accent-orange); }
         .balance-tabla-fila > div.tipo-color-rojo { color: var(--accent-red); }
-        /* Chips de selección de tipo en el formulario de carga: una fila
-           horizontal desplazable, 1 tap para elegir (el camino frecuente).
-           Volver a tocar el chip activo lo deselecciona. */
+        /* Chips de selección de tipo en el formulario de carga: grid fijo de
+           2 columnas, todo visible de una sin scroll horizontal ni swipe.
+           Simple a propósito: sin bordes ni fondos de color por ítem, solo
+           el ícono (que ya lleva su color propio) y el texto. 1 tap para
+           elegir; volver a tocar el chip activo lo deselecciona. */
         .tipo-chips {
-          display: flex;
-          align-items: stretch;
-          border: 1px solid var(--border-panel);
-          border-radius: 14px;
-          background: var(--bg-panel-alt);
-          overflow-x: auto;
-          margin-bottom: 8px;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px 14px;
+          margin-bottom: 10px;
         }
-        .tipo-chips::-webkit-scrollbar { display: none; }
         .tipo-chip {
           display: flex;
           align-items: center;
           gap: 8px;
-          flex-shrink: 0;
-          background: transparent;
+          background: none;
           border: none;
-          border-right: 1px solid var(--border-panel);
-          padding: 10px 14px;
+          padding: 2px 0;
           cursor: pointer;
           touch-action: manipulation;
-          opacity: 0.6;
+          opacity: 0.55;
+          text-align: left;
         }
-        .tipo-chip:last-child { border-right: none; }
         .tipo-chip.active {
-          background: var(--bg-panel);
           opacity: 1;
         }
         .tipo-chip-textos {
