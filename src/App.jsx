@@ -1680,6 +1680,84 @@ function Goteo() {
   );
 }
 
+// --- Íconos de tipo de ingreso ---
+// SVG inline en vez de lucide: la librería no tiene bolsa de suero, estómago
+// ni bolsa de hemoderivado, y estos cuatro dibujos son justamente los que
+// distinguen las categorías de un vistazo. Todos usan currentColor, así que
+// el color lo define la clase del contenedor (un solo lugar donde cambiarlo).
+// Íconos provistos por Irvin como SVG exactos. Cada uno mantiene su propio
+// viewBox (tienen recuadros distintos) y su trazo de 6. `size` es la ALTURA
+// en px; el ancho sale de la proporción de cada recuadro para no deformar.
+// Único cambio respecto de los SVG originales: el relleno de líquido se
+// recorta con matemática de path (borde inferior redondeado) en vez de
+// <clipPath id="...">, porque un id se repetiría en cada instancia del
+// ícono (chips + filas + hoja) y los ids duplicados son inválidos y pueden
+// recortar mal en Safari.
+
+function IconoBolsaSuero({ size = 19 }) {
+  const r = 128 / 180;
+  return (
+    <svg width={size * r} height={size} viewBox="0 0 128 180" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M58 18V10c0-4 2-6 6-6s6 2 6 6v8" />
+      <rect x="18" y="20" width="92" height="122" rx="16" />
+      <path d="M64 60v26" />
+      <path d="M51 73h26" />
+      <path d="M58 142v16h12v-16" />
+      <path d="M64 158v10c0 7-5 12-12 12c-7 0-12-5-12-12" />
+    </svg>
+  );
+}
+
+function IconoBolsaSangre({ size = 19 }) {
+  const r = 128 / 168;
+  return (
+    <svg width={size * r} height={size} viewBox="0 0 128 168" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M54 22V12a10 10 0 0 1 20 0v10" strokeWidth="6" />
+      <rect x="22" y="22" width="84" height="108" rx="18" strokeWidth="6" />
+      {/* Líquido: mismo perfil ondulado del original, con el fondo cerrado
+          por el radio interno de la bolsa (reemplaza al clipPath). */}
+      <path d="M30 88C44 82 58 88 72 86C84 84 92 82 98 84V112a14 14 0 0 1-14 14H44a14 14 0 0 1-14-14Z" fill="currentColor" stroke="none" />
+      <path d="M50 130H78V142H68V166H60V142H50Z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function IconoEstomago({ size = 19 }) {
+  const r = 147 / 153;
+  return (
+    <svg width={size * r} height={size} viewBox="0 0 147 153" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M75 10L73 14L72 25L76 34L80 36L85 36L92 33L99 33L106 36L115 46L120 59L120 76L117 87L111 98L100 110L86 118L78 120L68 120L62 118L46 105L37 104L31 110L31 127" />
+      <path d="M60 10L58 15L58 29L63 44L66 56L65 69L60 82L54 91L46 98L35 102L23 104L15 112L15 127" />
+    </svg>
+  );
+}
+
+function IconoVaso({ size = 19 }) {
+  const r = 128 / 168;
+  return (
+    <svg width={size * r} height={size} viewBox="0 0 128 168" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M34 12H94Q102 12 102 20L90 150Q89 158 82 158H46Q39 158 38 150L26 20Q26 12 34 12Z" />
+      <path d="M31 70C43 67 52 74 64 73C75 72 82 66 95 69" />
+    </svg>
+  );
+}
+
+// Catálogo de tipos de ingreso del turno. IMPORTANTE: esto es puramente
+// descriptivo — etiqueta de qué era cada volumen. NO cambia ninguna cuenta:
+// el "Total Ingresos" sigue sumando la columna "Pasó" de todas las filas,
+// tenga o no tipo asignado, exactamente igual que antes.
+const TIPOS_INGRESO = [
+  { id: "PHP", label: "PHP", nombre: "Plan de hidratación parenteral", Icono: IconoBolsaSuero, color: "violeta" },
+  { id: "IEC", label: "IEC", nombre: "Infusión endovenosa continua", Icono: IconoBolsaSuero, color: "verde" },
+  { id: "ATB", label: "ATB", nombre: "Antibiótico", Icono: IconoBolsaSuero, color: "verde" },
+  { id: "EXP", label: "EXP", nombre: "Expansión", Icono: IconoBolsaSuero, color: "verde" },
+  { id: "AE", label: "A/E", nombre: "Alimentación enteral", Icono: IconoEstomago, color: "naranja" },
+  { id: "VO", label: "VO", nombre: "Vía oral", Icono: IconoVaso, color: "azul" },
+  { id: "GR", label: "GR", nombre: "Glóbulos rojos", Icono: IconoBolsaSangre, color: "rojo" },
+];
+
+const TIPOS_INGRESO_POR_ID = Object.fromEntries(TIPOS_INGRESO.map((t) => [t.id, t]));
+
 // Claves de localStorage para Balance. Mismo mecanismo ya probado que usa
 // esta app para persistir el tema (ver toggleTheme más abajo): así lo
 // cargado en Balance sobrevive a que el usuario cambie de pestaña, minimice
@@ -1827,7 +1905,13 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
   const [campoTotal, setCampoTotal] = useState("");
   const [campoPaso, setCampoPaso] = useState("");
   const [campoQuedo, setCampoQuedo] = useState("");
+  const [avisoParcial, setAvisoParcial] = useState("");
   const [valorEgresoParcial, setValorEgresoParcial] = useState("");
+  // Tipo elegido para el suero que se está por cargar. Arranca en null y
+  // vuelve a null después de cada alta: obliga a una elección consciente por
+  // fila en vez de arrastrar el tipo anterior, que es como se etiqueta mal
+  // un ATB como PHP cuando se cargan varios seguidos.
+  const [tipoParcial, setTipoParcial] = useState(null);
   const idParcialRef = useRef(mayorIdGuardado(leerListaGuardada(K_INGRESOS_PARCIAL), leerListaGuardada(K_EGRESOS_PARCIAL)) + 1);
   const campoTotalRef = useRef(null);
   const campoPasoRef = useRef(null);
@@ -1842,6 +1926,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
   const ordenCamposRef = useRef(["total", "paso", "quedo"]);
 
   const actualizarCampoParcial = (campo, valorStr) => {
+    if (avisoParcial) setAvisoParcial("");
     const valorAnterior = { total: campoTotal, paso: campoPaso, quedo: campoQuedo };
     valorAnterior[campo] = valorStr;
     ({ total: setCampoTotal, paso: setCampoPaso, quedo: setCampoQuedo }[campo])(valorStr);
@@ -1864,21 +1949,40 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
   };
 
   const agregarIngresoParcial = () => {
-    const nTotal = num(campoTotal);
-    if (nTotal == null) return;
-    // Pasó y Quedó ahora son opcionales al cargar: si al recibir el turno ya
-    // sabés cuánto trae cada suero (Total) pero todavía no cuánto pasó/quedó
-    // (eso se sabe recién al cerrar el turno), se puede agregar la fila solo
-    // con el Total y completar el resto más tarde tocando la celda en la
-    // tabla. Si ya se sabían 2 de los 3 (por el resolver de arriba), quedan
-    // guardados de una.
     const nPaso = num(campoPaso);
-    const nQuedo = num(campoQuedo);
-    const item = { id: idParcialRef.current++, total: nTotal, paso: nPaso, quedo: nQuedo };
+    // "Pasó" es lo único obligatorio: es el volumen que realmente entró al
+    // paciente y lo que suma el balance. Vol. Total y Quedó son opcionales.
+    if (nPaso == null) {
+      setAvisoParcial("Completá cuánto pasó.");
+      return;
+    }
+
+    let nTotal = num(campoTotal);
+    let nQuedo = num(campoQuedo);
+
+    // Autocompletado del Total: si no lo cargaste, la regla clínica es que
+    // pasó todo lo que había (VO, sonda, ATB 100/100...). No es la app
+    // "inventando" un volumen: al no declarar que quedó algo, el total ES lo
+    // que pasó. El dato que entra al balance ("Pasó") sigue siendo el que
+    // tipeó el usuario; solo se deriva el Total, que en ese caso coincide.
+    if (nTotal == null) {
+      nTotal = nPaso;
+      if (nQuedo == null) nQuedo = 0;
+    }
+
+    // Guardia: Pasó no puede superar el volumen total declarado.
+    if (nQuedo == null && nTotal != null && nPaso > nTotal + 0.001) {
+      setAvisoParcial("Pasó no puede ser mayor al Vol. Total.");
+      return;
+    }
+
+    const item = { id: idParcialRef.current++, total: nTotal, paso: nPaso, quedo: nQuedo, tipo: tipoParcial };
     setIngresosParcial((arr) => [...arr, item]);
+    setAvisoParcial("");
     setCampoTotal("");
     setCampoPaso("");
     setCampoQuedo("");
+    setTipoParcial(null);
     ordenCamposRef.current = ["total", "paso", "quedo"];
     // Foco automático en "Vol. Total" para cargar el siguiente suero/plan sin
     // tener que tocar el campo a mano cada vez.
@@ -1898,7 +2002,15 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
   const irAQuedo = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      campoQuedoRef.current?.focus();
+      // Si el usuario cargó solo "Pasó" (el caso más común: VO, sonda, ATB
+      // 100/100), Enter agrega de una sin obligar a pasar por "Quedó". Si ya
+      // venía completando "Quedó", en cambio, salta ahí para no perder ese
+      // dato.
+      if (num(campoQuedo) == null) {
+        agregarIngresoParcial();
+      } else {
+        campoQuedoRef.current?.focus();
+      }
     }
   };
   const irAAgregar = (e) => {
@@ -1938,6 +2050,16 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
     );
     setCeldaEditando(null);
     setValorCeldaEditando("");
+  };
+
+  // Cambiar el tipo de una fila ya cargada: al tocar la celda "Tipo" se abre
+  // una hoja con los nombres completos (no solo las siglas), que es donde
+  // conviene desambiguar PHP de IEC sin depender de recordar la abreviatura.
+  const [filaEligiendoTipo, setFilaEligiendoTipo] = useState(null); // id | null
+
+  const asignarTipoAFila = (id, tipoId) => {
+    setIngresosParcial((arr) => arr.map((it) => (it.id === id ? { ...it, tipo: tipoId } : it)));
+    setFilaEligiendoTipo(null);
   };
 
   const agregarEgresoParcial = () => {
@@ -2141,13 +2263,37 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
           ) : (
             <div className="balance-tabla-parcial">
               <div className="balance-tabla-header">
+                <div>Tipo</div>
                 <div>Volumen total (ml)</div>
-                <div className="balance-tabla-th-grande">Pasó</div>
-                <div className="balance-tabla-th-grande">Quedó</div>
+                <div>Pasó (ml)</div>
+                <div>Quedó (ml)</div>
                 <div></div>
               </div>
               {ingresosParcial.map((it) => (
                 <div className="balance-tabla-fila" key={it.id}>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className={`balance-tabla-col-tipo ${it.tipo ? `tipo-color-${TIPOS_INGRESO_POR_ID[it.tipo]?.color}` : "balance-tabla-col-vacia"}`}
+                    onClick={() => setFilaEligiendoTipo(it.id)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setFilaEligiendoTipo(it.id); }}
+                  >
+                    {(() => {
+                      // Filas cargadas antes de que existiera esta columna no
+                      // tienen tipo: se muestran con guion y se pueden
+                      // etiquetar tocándolas, sin perder ningún dato.
+                      const def = it.tipo ? TIPOS_INGRESO_POR_ID[it.tipo] : null;
+                      if (!def) return "—";
+                      const { Icono } = def;
+                      return (
+                        <>
+                          <Icono />
+                          <span className="balance-tipo-sigla">{def.label}</span>
+                        </>
+                      );
+                    })()}
+                  </div>
+
                   <div>{fmtDosis(it.total, 2)}</div>
 
                   {celdaEditando?.id === it.id && celdaEditando?.campo === "paso" ? (
@@ -2211,12 +2357,67 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
             </div>
           )}
 
+          {filaEligiendoTipo != null && (
+            <div className="tipo-sheet-backdrop" onClick={() => setFilaEligiendoTipo(null)}>
+              <div className="tipo-sheet" onClick={(e) => e.stopPropagation()}>
+                <div className="tipo-sheet-titulo">Tipo de ingreso</div>
+                {TIPOS_INGRESO.map((t) => {
+                  const { Icono } = t;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={`tipo-sheet-opcion tipo-color-${t.color}`}
+                      onClick={() => asignarTipoAFila(filaEligiendoTipo, t.id)}
+                    >
+                      <Icono size={21} />
+                      <span className="tipo-sheet-sigla">{t.label}</span>
+                      <span className="tipo-sheet-nombre">{t.nombre}</span>
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="tipo-sheet-opcion tipo-sheet-quitar"
+                  onClick={() => asignarTipoAFila(filaEligiendoTipo, null)}
+                >
+                  <span className="tipo-sheet-nombre">Sin tipo</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="section-title">Suero infundiendo/infundido</div>
+          <div className="tipo-chips">
+            {TIPOS_INGRESO.map((t) => {
+              const { Icono } = t;
+              const activo = tipoParcial === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`tipo-chip tipo-color-${t.color} ${activo ? "active" : ""}`}
+                  aria-pressed={activo}
+                  title={t.nombre}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setTipoParcial(activo ? null : t.id)}
+                >
+                  <Icono size={19} />
+                  <span>{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
           <div className="balance-parcial-form">
             <Field ref={campoTotalRef} label="Vol. Total" unit="ml" value={campoTotal} onChange={(v) => actualizarCampoParcial("total", v)} enterKeyHint="next" onKeyDown={irAPaso} />
             <Field ref={campoPasoRef} label="Pasó" unit="ml" value={campoPaso} onChange={(v) => actualizarCampoParcial("paso", v)} enterKeyHint="next" onKeyDown={irAQuedo} />
             <Field ref={campoQuedoRef} label="Quedó" unit="ml" value={campoQuedo} onChange={(v) => actualizarCampoParcial("quedo", v)} enterKeyHint="send" onKeyDown={irAAgregar} />
           </div>
+          {avisoParcial && (
+            <div className="balance-aviso-parcial">
+              <AlertCircle size={14} /> {avisoParcial}
+            </div>
+          )}
           <button
             type="button"
             className="balance-agregar-parcial-btn"
@@ -2674,6 +2875,7 @@ export default function App() {
           --accent-red-pale: #F4C7C7;
           --accent-red-border: #D14242;
           --accent-violet: #BF5AF2;
+          --accent-blue: #4DA3E8;
           --accent-orange: #FF9F0A;
           --accent-orange-deep: #E08A3D;
           --accent-yellow: #FFD60A;
@@ -2733,6 +2935,7 @@ export default function App() {
           --accent-red-pale: #7A2A26;
           --accent-red-border: #D14242;
           --accent-violet: #8A3FC4;
+          --accent-blue: #1B6FA8;
           --accent-orange: #C97200;
           --accent-orange-deep: #A8631F;
           --accent-yellow: #9C7E00;
@@ -2949,10 +3152,10 @@ export default function App() {
           background: var(--bg-panel);
           border: 1px solid var(--border-panel);
           border-radius: 16px;
-          padding: 18px;
+          padding: 15px;
         }
         .panel-row {
-          margin-bottom: 16px;
+          margin-bottom: 13px;
         }
         .panel-row.two-col {
           display: grid;
@@ -3052,8 +3255,8 @@ export default function App() {
           letter-spacing: 0.1em;
           color: var(--accent-green-deep);
           font-weight: 700;
-          margin: 12px 0 10px;
-          padding-top: 10px;
+          margin: 10px 0 8px;
+          padding-top: 8px;
           border-top: 1px solid var(--border-panel);
         }
         .panel-row:first-child + .section-title,
@@ -3625,30 +3828,27 @@ export default function App() {
           border: 1px solid var(--border-panel);
           border-radius: 12px;
           overflow: hidden;
-          margin-bottom: 14px;
+          margin-bottom: 11px;
         }
         .balance-tabla-header, .balance-tabla-fila {
           display: grid;
-          grid-template-columns: 1fr 1fr 1fr 40px;
+          grid-template-columns: 0.85fr 1.15fr 1fr 1fr 34px;
         }
         .balance-tabla-header {
           background: var(--bg-panel-alt);
         }
         .balance-tabla-header > div {
-          padding: 6px 4px;
+          padding: 4px 3px;
           font-size: 10.5px;
           font-weight: 700;
           color: var(--text-secondary);
           text-align: center;
         }
-        .balance-tabla-header > div.balance-tabla-th-grande {
-          font-size: 12.5px;
-        }
         .balance-tabla-fila {
           border-top: 1px solid var(--border-panel);
         }
         .balance-tabla-fila > div {
-          padding: 6px 4px;
+          padding: 3px 3px;
           font-size: 15px;
           font-weight: 700;
           color: var(--text-primary);
@@ -3662,7 +3862,7 @@ export default function App() {
         .balance-tabla-fila > div:not(:last-child) {
           border-right: 1px solid var(--border-panel);
         }
-        .balance-tabla-fila > div:last-child { padding: 4px; }
+        .balance-tabla-fila > div:last-child { padding: 2px; }
         /* Selector compuesto (mismo peso que la regla base de arriba) para
            que el verde y el tamaño grande realmente ganen la cascada: una
            clase sola (.balance-tabla-col-paso) tiene MENOS especificidad
@@ -3683,6 +3883,119 @@ export default function App() {
           cursor: pointer;
           touch-action: manipulation;
         }
+        /* --- Columna Tipo --- */
+        .balance-tabla-fila > div.balance-tabla-col-tipo {
+          gap: 5px;
+          font-size: 12.5px;
+          font-weight: 700;
+          cursor: pointer;
+          touch-action: manipulation;
+          padding: 3px 2px;
+        }
+        .balance-tipo-sigla { line-height: 1; }
+        .tipo-color-azul { color: var(--accent-blue); }
+        .tipo-color-violeta { color: var(--accent-violet); }
+        .tipo-color-verde { color: var(--accent-green); }
+        .tipo-color-naranja { color: var(--accent-orange); }
+        .tipo-color-rojo { color: var(--accent-red); }
+        /* Igual que con .balance-tabla-col-paso: una clase sola pierde contra
+           ".balance-tabla-fila > div" (que fija color: var(--text-primary)) y
+           el color del tipo no se vería. Se repiten en forma compuesta. */
+        .balance-tabla-fila > div.tipo-color-azul { color: var(--accent-blue); }
+        .balance-tabla-fila > div.tipo-color-violeta { color: var(--accent-violet); }
+        .balance-tabla-fila > div.tipo-color-verde { color: var(--accent-green); }
+        .balance-tabla-fila > div.tipo-color-naranja { color: var(--accent-orange); }
+        .balance-tabla-fila > div.tipo-color-rojo { color: var(--accent-red); }
+        /* Chips de selección de tipo en el formulario de carga: una fila
+           horizontal desplazable, 1 tap para elegir (el camino frecuente).
+           Volver a tocar el chip activo lo deselecciona. */
+        .tipo-chips {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 4px;
+          margin-bottom: 8px;
+        }
+        .tipo-chip {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 2px;
+          min-width: 0;
+          background: var(--bg-panel-alt);
+          border: 1.5px solid var(--border-panel);
+          border-radius: 10px;
+          padding: 6px 1px;
+          font-size: 10.5px;
+          font-weight: 800;
+          letter-spacing: -0.01em;
+          cursor: pointer;
+          touch-action: manipulation;
+          opacity: 0.7;
+        }
+        .tipo-chip.active {
+          border-color: currentColor;
+          background: var(--bg-panel);
+          opacity: 1;
+        }
+        /* Hoja de selección para cambiar el tipo de una fila ya cargada.
+           Muestra el nombre completo además de la sigla: es donde se
+           desambigua PHP de IEC sin depender de la memoria. */
+        .tipo-sheet-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.45);
+          z-index: 200;
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+        }
+        .tipo-sheet {
+          width: 100%;
+          max-width: 520px;
+          background: var(--bg-panel);
+          border-top-left-radius: 18px;
+          border-top-right-radius: 18px;
+          border: 1px solid var(--border-panel);
+          padding: 14px 12px calc(18px + env(safe-area-inset-bottom));
+          max-height: 80vh;
+          overflow-y: auto;
+        }
+        .tipo-sheet-titulo {
+          font-size: 12px;
+          font-weight: 700;
+          color: var(--text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          margin-bottom: 10px;
+          padding-left: 4px;
+        }
+        .tipo-sheet-opcion {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          background: var(--bg-panel-alt);
+          border: 1px solid var(--border-panel);
+          border-radius: 12px;
+          padding: 12px 13px;
+          margin-bottom: 7px;
+          cursor: pointer;
+          touch-action: manipulation;
+          text-align: left;
+        }
+        .tipo-sheet-sigla {
+          font-size: 14px;
+          font-weight: 800;
+          min-width: 34px;
+        }
+        .tipo-sheet-nombre {
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+        .tipo-sheet-quitar { justify-content: center; }
+        .tipo-sheet-quitar .tipo-sheet-nombre { color: var(--text-secondary); }
         .balance-tabla-input {
           width: 100%;
           height: 100%;
@@ -3703,20 +4016,30 @@ export default function App() {
           grid-template-columns: 1fr 1fr 1fr;
           gap: 8px;
         }
+        .balance-parcial-form .field { gap: 4px; }
+        .balance-parcial-form .field-input { padding: 10px 12px; }
         .balance-parcial-form .field-label { color: var(--accent-green-deep); }
         .balance-agregar-row-egreso .field-label { color: var(--accent-orange-deep); }
         .balance-agregar-row-egreso .field-input:focus { border-color: var(--accent-orange); }
-        .balance-agregar-parcial-btn {
-          width: 100%;
+        .balance-aviso-parcial {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12.5px;
+          font-weight: 600;
+          color: var(--accent-orange-deep);
+          margin: 2px 0 8px;
+        }
+        .balance-agregar-parcial-btn {          width: 100%;
           background: var(--accent-green);
           color: var(--bg-app);
           border: none;
           border-radius: 12px;
-          padding: 12px;
+          padding: 11px;
           font-size: 13.5px;
           font-weight: 700;
-          margin-top: 10px;
-          margin-bottom: 16px;
+          margin-top: 8px;
+          margin-bottom: 12px;
           cursor: pointer;
           touch-action: manipulation;
         }
@@ -3725,9 +4048,9 @@ export default function App() {
           align-items: center;
           justify-content: space-between;
           gap: 10px;
-          margin-top: 10px;
-          margin-bottom: 6px;
-          padding-top: 10px;
+          margin-top: 8px;
+          margin-bottom: 4px;
+          padding-top: 8px;
           border-top: 1px solid var(--border-panel);
         }
         .balance-subtotal-parcial-texto {
@@ -3780,7 +4103,7 @@ export default function App() {
           display: flex;
           align-items: center;
           gap: 8px;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
           overflow-x: auto;
           scrollbar-width: none;
           -ms-overflow-style: none;
