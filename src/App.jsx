@@ -7,6 +7,17 @@ import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, 
 // escalado de viewport más abajo para el detalle de cómo se aplica.
 const ESCALA_UI = 1.08;
 
+// Esta app es React web (no Flutter/React Native), así que no existe
+// Platform.isIOS: el equivalente acá es leer el user agent una sola vez al
+// cargar el módulo. navigator.platform === "MacIntel" + maxTouchPoints > 1
+// cubre iPads modernos, que desde iPadOS 13 se identifican como Mac en el
+// user agent. Se usa solo para el ajuste puntual del selector de tipo de
+// ingreso en Balance (ver .tipo-chips-ios); no toca nada más de la app.
+const ES_IOS =
+  typeof navigator !== "undefined" &&
+  (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+
 const DROGAS = [
   "Adrenalina",
   "Amiodarona",
@@ -2403,7 +2414,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
           )}
 
           <div className="section-title">Suero infundiendo/infundido</div>
-          <div className="tipo-chips">
+          <div className={`tipo-chips ${ES_IOS ? "tipo-chips-ios" : ""}`}>
             {TIPOS_INGRESO.map((t) => {
               const { Icono } = t;
               const activo = tipoParcial === t.id;
@@ -2417,7 +2428,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                   onClick={() => setTipoParcial(activo ? null : t.id)}
                 >
                   <span className="tipo-chip-header">
-                    <Icono size={16} />
+                    <Icono size={ES_IOS ? 15 : 16} />
                     <span className="tipo-chip-sigla">{t.label}</span>
                   </span>
                   <span className="tipo-chip-nombre">{t.nombre}</span>
@@ -4011,6 +4022,28 @@ export default function App() {
           white-space: normal;
           word-break: normal;
           overflow-wrap: normal;
+        }
+        /* Ajuste exclusivo iOS: en iPhone (sobre todo 12 Pro Max) el bloque
+           se ve ~5% más grande que en Android con estos mismos valores. En
+           vez de tocar el tamaño global de la app (ESCALA_UI, que afecta
+           TODO), se escala solo este selector ×0.95 — ícono, tipografía,
+           padding y separación — sin cambiar el layout ni tocar Android
+           (que no recibe la clase .tipo-chips-ios). */
+        .tipo-chips-ios {
+          border-radius: 13.3px;
+        }
+        .tipo-chips-ios .tipo-chip {
+          gap: 5.7px;
+          padding: 9.5px 5.7px;
+        }
+        .tipo-chips-ios .tipo-chip-header {
+          gap: 3.8px;
+        }
+        .tipo-chips-ios .tipo-chip-sigla {
+          font-size: 11.9px;
+        }
+        .tipo-chips-ios .tipo-chip-nombre {
+          font-size: 9px;
         }
         /* Hoja de selección para cambiar el tipo de una fila ya cargada.
            Muestra el nombre completo además de la sigla: es donde se
