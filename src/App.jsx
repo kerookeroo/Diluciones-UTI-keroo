@@ -3960,15 +3960,16 @@ export default function App() {
            volver a tocar el chip activo lo deselecciona. */
         .tipo-chips {
           display: flex;
-          gap: 4px;
+          flex-wrap: wrap;
+          gap: 8px 6px;
           margin-bottom: 10px;
         }
         .tipo-chip {
           display: flex;
           align-items: flex-start;
-          gap: 3px;
-          flex: 1 1 0;
-          min-width: 0;
+          gap: 4px;
+          flex: 1 1 21%;
+          min-width: 78px;
           background: none;
           border: none;
           padding: 2px 0;
@@ -3991,17 +3992,18 @@ export default function App() {
           min-width: 0;
         }
         .tipo-chip-sigla {
-          font-size: 9.5px;
+          font-size: 10.5px;
           font-weight: 800;
           letter-spacing: -0.01em;
           white-space: nowrap;
         }
         .tipo-chip-nombre {
-          font-size: 6.8px;
+          font-size: 8px;
           font-weight: 500;
           color: var(--text-tertiary);
           white-space: normal;
-          word-break: break-word;
+          word-break: normal;
+          overflow-wrap: normal;
         }
         /* Hoja de selección para cambiar el tipo de una fila ya cargada.
            Muestra el nombre completo además de la sigla: es donde se
