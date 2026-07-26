@@ -2803,7 +2803,7 @@ export default function App() {
     // terminando en un cambio de pestaña no buscado. Si el toque arranca
     // ahí adentro, no lo trackeamos: que el scroll nativo del navegador lo
     // resuelva solo, sin interferencia del swipe entre pestañas.
-    if (e.target.closest(".mode-tabs") || e.target.closest(".paciente-tabs")) {
+    if (e.target.closest(".mode-tabs") || e.target.closest(".paciente-tabs") || e.target.closest(".tipo-chips")) {
       touchStartRef.current = null;
       return;
     }
@@ -3951,42 +3951,51 @@ export default function App() {
         .balance-tabla-fila > div.tipo-color-verde { color: var(--accent-green); }
         .balance-tabla-fila > div.tipo-color-naranja { color: var(--accent-orange); }
         .balance-tabla-fila > div.tipo-color-rojo { color: var(--accent-red); }
-        /* Chips de selección de tipo en el formulario de carga: cada ítem
-           ocupa el ancho que su propio contenido necesita (flex con ancho
-           natural, no columnas iguales forzadas), empaquetándose de
-           izquierda a derecha y envolviendo a la fila siguiente cuando no
-           entra más. Así "GR" o "VO" ocupan poco y le dejan más aire al
-           nombre de "PHP"/"IEC" para acomodarse en 2 líneas completas, sin
-           cortar palabras. Simple: sin bordes ni fondos de color por ítem.
-           1 tap para elegir; volver a tocar el chip activo lo deselecciona. */
+        /* Chips de selección de tipo en el formulario de carga: una sola
+           fila continua dentro de un contenedor con línea divisoria entre
+           ítems (no tarjetas individuales), igual que el diseño de
+           referencia. flex:1 en cada ítem reparte el ancho total entre los
+           7, pero sin min-width:0 — así el que necesita más lugar para su
+           nombre (PHP, IEC) lo toma del que necesita menos (GR, VO), en vez
+           de una distribución rígida en partes iguales. overflow-x es solo
+           una red de seguridad por si en la pantalla más angosta ni así
+           entra todo (con scrollbar oculta); en el resto no hace falta. */
         .tipo-chips {
           display: flex;
-          flex-wrap: wrap;
-          gap: 12px 18px;
+          flex-wrap: nowrap;
+          border: 1px solid var(--border-panel);
+          border-radius: 14px;
+          background: var(--bg-panel-alt);
           margin-bottom: 10px;
+          overflow-x: auto;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
         }
+        .tipo-chips::-webkit-scrollbar { display: none; }
         .tipo-chip {
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
-          gap: 4px;
-          flex: 0 1 auto;
-          max-width: 168px;
+          align-items: center;
+          gap: 6px;
+          flex: 1 1 0%;
           background: none;
           border: none;
-          padding: 2px 0;
+          border-right: 1px solid var(--border-panel);
+          padding: 10px 6px;
           cursor: pointer;
           touch-action: manipulation;
           opacity: 0.55;
-          text-align: left;
+          text-align: center;
         }
+        .tipo-chip:last-child { border-right: none; }
         .tipo-chip.active {
+          background: var(--bg-panel);
           opacity: 1;
         }
         .tipo-chip-header {
           display: flex;
           align-items: center;
-          gap: 5px;
+          gap: 4px;
         }
         .tipo-chip-sigla {
           font-size: 12.5px;
@@ -3995,10 +4004,10 @@ export default function App() {
           white-space: nowrap;
         }
         .tipo-chip-nombre {
-          font-size: 10px;
+          font-size: 9.5px;
           font-weight: 500;
           color: var(--text-tertiary);
-          line-height: 1.25;
+          line-height: 1.2;
           white-space: normal;
           word-break: normal;
           overflow-wrap: normal;
