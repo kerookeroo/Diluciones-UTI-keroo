@@ -2413,12 +2413,14 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                   type="button"
                   className={`tipo-chip tipo-color-${t.color} ${activo ? "active" : ""}`}
                   aria-pressed={activo}
-                  title={t.nombre}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setTipoParcial(activo ? null : t.id)}
                 >
-                  <Icono size={17} />
-                  <span className="tipo-chip-sigla">{t.label}</span>
+                  <span className="tipo-chip-header">
+                    <Icono size={16} />
+                    <span className="tipo-chip-sigla">{t.label}</span>
+                  </span>
+                  <span className="tipo-chip-nombre">{t.nombre}</span>
                 </button>
               );
             })}
@@ -3949,41 +3951,57 @@ export default function App() {
         .balance-tabla-fila > div.tipo-color-verde { color: var(--accent-green); }
         .balance-tabla-fila > div.tipo-color-naranja { color: var(--accent-orange); }
         .balance-tabla-fila > div.tipo-color-rojo { color: var(--accent-red); }
-        /* Chips de selección de tipo en el formulario de carga: las 7 en una
-           sola fila, todas visibles de una sin scroll horizontal ni swipe.
-           Solo ícono + sigla (sin nombre completo): el nombre completo no
-           entra en una sola línea en ningún ancho real de iPhone sin
-           cortarse o superponerse (probado), así que se muestra en el
-           desplegable al reasignar el tipo de una fila ya cargada, donde
-           sí hay lugar. Simple: sin bordes ni fondos de color por ítem. 1
-           tap para elegir; volver a tocar el chip activo lo deselecciona. */
+        /* Chips de selección de tipo en el formulario de carga: cada ítem
+           ocupa el ancho que su propio contenido necesita (flex con ancho
+           natural, no columnas iguales forzadas), empaquetándose de
+           izquierda a derecha y envolviendo a la fila siguiente cuando no
+           entra más. Así "GR" o "VO" ocupan poco y le dejan más aire al
+           nombre de "PHP"/"IEC" para acomodarse en 2 líneas completas, sin
+           cortar palabras. Simple: sin bordes ni fondos de color por ítem.
+           1 tap para elegir; volver a tocar el chip activo lo deselecciona. */
         .tipo-chips {
           display: flex;
-          gap: 4px;
+          flex-wrap: wrap;
+          gap: 12px 18px;
           margin-bottom: 10px;
         }
         .tipo-chip {
           display: flex;
           flex-direction: column;
-          align-items: center;
-          gap: 3px;
-          flex: 1 1 0;
-          min-width: 0;
+          align-items: flex-start;
+          gap: 4px;
+          flex: 0 1 auto;
+          max-width: 168px;
           background: none;
           border: none;
-          padding: 4px 0;
+          padding: 2px 0;
           cursor: pointer;
           touch-action: manipulation;
           opacity: 0.55;
+          text-align: left;
         }
         .tipo-chip.active {
           opacity: 1;
         }
+        .tipo-chip-header {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
         .tipo-chip-sigla {
-          font-size: 11px;
+          font-size: 12.5px;
           font-weight: 800;
           letter-spacing: -0.01em;
           white-space: nowrap;
+        }
+        .tipo-chip-nombre {
+          font-size: 10px;
+          font-weight: 500;
+          color: var(--text-tertiary);
+          line-height: 1.25;
+          white-space: normal;
+          word-break: normal;
+          overflow-wrap: normal;
         }
         /* Hoja de selección para cambiar el tipo de una fila ya cargada.
            Muestra el nombre completo además de la sigla: es donde se
