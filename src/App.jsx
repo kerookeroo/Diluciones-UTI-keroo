@@ -4453,7 +4453,7 @@ export default function App() {
           background: var(--bg-app-grad-top);
           border-top: 1px solid var(--border-panel);
           display: flex;
-          padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+          padding: 8px 12px calc(4px + env(safe-area-inset-bottom));
           gap: 6px;
         }
         .tab-btn {
