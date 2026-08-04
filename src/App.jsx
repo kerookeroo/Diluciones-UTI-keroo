@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home, Scale, Trash2, Brain, Pencil, Plus } from "lucide-react";
+import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home, Scale, Trash2, Brain, Pencil, Plus, X, Check } from "lucide-react";
 
 // Escala global de la interfaz para el uso real en el teléfono (todo se veía
 // muy chico en el PWA instalado). Subí o bajá este número para agrandar o
@@ -1787,10 +1787,8 @@ function resolverDefTipo(tipoValue) {
   return TIPOS_INGRESO_POR_ID[tipoValue] || null;
 }
 
-function pedirSiglaPersonalizada() {
-  const entrada = window.prompt("Sigla del medicamento (hasta 3 letras, ej: NTG)", "");
-  if (entrada == null) return null;
-  const limpio = entrada.trim().toUpperCase().slice(0, 3);
+function normalizarSiglaPersonalizada(texto) {
+  const limpio = texto.trim().toUpperCase().slice(0, 3);
   return limpio ? PREFIJO_TIPO_PERSONALIZADO + limpio : null;
 }
 
@@ -1948,6 +1946,13 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
   // fila en vez de arrastrar el tipo anterior, que es como se etiqueta mal
   // un ATB como PHP cuando se cargan varios seguidos.
   const [tipoParcial, setTipoParcial] = useState(null);
+  // Editor inline de sigla personalizada al elegir "Otro" en la fila de
+  // chips (carga de suero nuevo): en vez de un prompt() nativo del
+  // navegador (que tapa la app con una ventana ajena al diseño), la fila de
+  // chips colapsa a este mini-formulario propio; al confirmar o cancelar
+  // vuelve a mostrar los chips.
+  const [chipsModoOtro, setChipsModoOtro] = useState(false);
+  const [textoOtroChip, setTextoOtroChip] = useState("");
   const idParcialRef = useRef(mayorIdGuardado(leerListaGuardada(K_INGRESOS_PARCIAL), leerListaGuardada(K_EGRESOS_PARCIAL)) + 1);
   const campoTotalRef = useRef(null);
   const campoPasoRef = useRef(null);
@@ -1982,6 +1987,18 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
     } else if (campoAutomatico === "quedo" && nTotal != null && nPaso != null) {
       setCampoQuedo(fmtDosis(nTotal - nPaso, 2));
     }
+  };
+
+  const confirmarOtroChip = () => {
+    const valor = normalizarSiglaPersonalizada(textoOtroChip);
+    if (valor) setTipoParcial(valor);
+    setChipsModoOtro(false);
+    setTextoOtroChip("");
+  };
+
+  const cancelarOtroChip = () => {
+    setChipsModoOtro(false);
+    setTextoOtroChip("");
   };
 
   const agregarIngresoParcial = () => {
@@ -2096,6 +2113,16 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
   // una hoja con los nombres completos (no solo las siglas), que es donde
   // conviene desambiguar PHP de IEC sin depender de recordar la abreviatura.
   const [filaEligiendoTipo, setFilaEligiendoTipo] = useState(null); // id | null
+  // Igual que chipsModoOtro/textoOtroChip pero para el desplegable de una
+  // fila ya cargada: al elegir "Otro" ahí, la lista de siglas colapsa a este
+  // mismo mini-formulario en vez de abrir un prompt() nativo. Se resetea
+  // cada vez que se abre/cierra el desplegable de una fila distinta.
+  const [dropdownModoOtro, setDropdownModoOtro] = useState(false);
+  const [textoOtroFila, setTextoOtroFila] = useState("");
+  useEffect(() => {
+    setDropdownModoOtro(false);
+    setTextoOtroFila("");
+  }, [filaEligiendoTipo]);
 
   // Cierre al tocar fuera del dropdown. Antes esto lo hacía un overlay con
   // position:fixed, pero el transform del track de pestañas rompe el fixed
@@ -2117,6 +2144,12 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
   const asignarTipoAFila = (id, tipoId) => {
     setIngresosParcial((arr) => arr.map((it) => (it.id === id ? { ...it, tipo: tipoId } : it)));
     setFilaEligiendoTipo(null);
+  };
+
+  const confirmarOtroFila = (id) => {
+    const valor = normalizarSiglaPersonalizada(textoOtroFila);
+    if (valor) asignarTipoAFila(id, valor);
+    else setFilaEligiendoTipo(null);
   };
 
   const agregarEgresoParcial = () => {
@@ -2348,42 +2381,70 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                     })()}
                     {filaEligiendoTipo === it.id && (
                       <div className="tipo-dropdown-list" onClick={(e) => e.stopPropagation()}>
-                        <div className="tipo-dropdown-scroll">
-                            {TIPOS_INGRESO.map((t) => {
-                              const { Icono } = t;
-                              return (
-                                <button
-                                  key={t.id}
-                                  type="button"
-                                  className={`tipo-dropdown-item tipo-color-${t.color} ${it.tipo === t.id ? "activo" : ""}`}
-                                  onClick={() => asignarTipoAFila(it.id, t.id)}
-                                >
-                                  <Icono size={20} />
-                                  <span className="tipo-dropdown-sigla">{t.label}</span>
-                                </button>
-                              );
-                            })}
-                            <button
-                              type="button"
-                              className={`tipo-dropdown-item tipo-color-neutro ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
-                              onClick={() => {
-                                const valor = pedirSiglaPersonalizada();
-                                if (valor) asignarTipoAFila(it.id, valor);
+                        {dropdownModoOtro ? (
+                          <div className="tipo-otro-editor">
+                            <Pencil size={16} strokeWidth={2.2} />
+                            <span className="tipo-otro-label">Otro</span>
+                            <input
+                              type="text"
+                              className="tipo-otro-input"
+                              placeholder="Hasta 3 letras"
+                              value={textoOtroFila}
+                              maxLength={3}
+                              autoFocus
+                              enterKeyHint="done"
+                              onChange={(e) => setTextoOtroFila(e.target.value.toUpperCase().slice(0, 3))}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") confirmarOtroFila(it.id);
+                                if (e.key === "Escape") setDropdownModoOtro(false);
                               }}
-                            >
-                              <Pencil size={18} strokeWidth={2.2} />
-                              <span className="tipo-dropdown-sigla">
-                                {it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? it.tipo.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "Otro"}
-                              </span>
+                            />
+                            <span className="tipo-otro-contador">{textoOtroFila.length}/3</span>
+                            <button type="button" className="tipo-otro-btn tipo-otro-cancelar" onClick={() => setDropdownModoOtro(false)} aria-label="Cancelar">
+                              <X size={15} strokeWidth={2.4} />
                             </button>
-                            <button
-                              type="button"
-                              className="tipo-dropdown-item tipo-dropdown-quitar"
-                              onClick={() => asignarTipoAFila(it.id, null)}
-                            >
-                              <span className="tipo-dropdown-sigla">—</span>
+                            <button type="button" className="tipo-otro-btn tipo-otro-confirmar" onClick={() => confirmarOtroFila(it.id)} disabled={!textoOtroFila} aria-label="Confirmar">
+                              <Check size={15} strokeWidth={2.6} />
                             </button>
-                        </div>
+                          </div>
+                        ) : (
+                          <div className="tipo-dropdown-scroll">
+                              {TIPOS_INGRESO.map((t) => {
+                                const { Icono } = t;
+                                return (
+                                  <button
+                                    key={t.id}
+                                    type="button"
+                                    className={`tipo-dropdown-item tipo-color-${t.color} ${it.tipo === t.id ? "activo" : ""}`}
+                                    onClick={() => asignarTipoAFila(it.id, t.id)}
+                                  >
+                                    <Icono size={20} />
+                                    <span className="tipo-dropdown-sigla">{t.label}</span>
+                                  </button>
+                                );
+                              })}
+                              <button
+                                type="button"
+                                className={`tipo-dropdown-item tipo-color-neutro ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
+                                onClick={() => {
+                                  setTextoOtroFila(it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? it.tipo.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "");
+                                  setDropdownModoOtro(true);
+                                }}
+                              >
+                                <Pencil size={18} strokeWidth={2.2} />
+                                <span className="tipo-dropdown-sigla">
+                                  {it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? it.tipo.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "Otro"}
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                className="tipo-dropdown-item tipo-dropdown-quitar"
+                                onClick={() => asignarTipoAFila(it.id, null)}
+                              >
+                                <span className="tipo-dropdown-sigla">—</span>
+                              </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2452,49 +2513,77 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
           )}
 
           <div className="section-title">Suero infundiendo/infundido</div>
-          <div className={`tipo-chips ${ES_IOS ? "tipo-chips-ios" : ""}`}>
-            {TIPOS_INGRESO.map((t) => {
-              const { Icono } = t;
-              const activo = tipoParcial === t.id;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  className={`tipo-chip tipo-color-${t.color} ${activo ? "active" : ""}`}
-                  aria-pressed={activo}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => setTipoParcial(activo ? null : t.id)}
-                >
-                  <span className="tipo-chip-header">
-                    <Icono size={ES_IOS ? 15 : 16} />
-                    <span className="tipo-chip-sigla">{t.label}</span>
+          {chipsModoOtro ? (
+            <div className="tipo-otro-editor tipo-otro-editor-chips">
+              <Pencil size={16} strokeWidth={2.2} />
+              <span className="tipo-otro-label">Otro</span>
+              <input
+                type="text"
+                className="tipo-otro-input"
+                placeholder="Hasta 3 letras"
+                value={textoOtroChip}
+                maxLength={3}
+                autoFocus
+                enterKeyHint="done"
+                onChange={(e) => setTextoOtroChip(e.target.value.toUpperCase().slice(0, 3))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") confirmarOtroChip();
+                  if (e.key === "Escape") cancelarOtroChip();
+                }}
+              />
+              <span className="tipo-otro-contador">{textoOtroChip.length}/3</span>
+              <button type="button" className="tipo-otro-btn tipo-otro-cancelar" onClick={cancelarOtroChip} aria-label="Cancelar">
+                <X size={15} strokeWidth={2.4} />
+              </button>
+              <button type="button" className="tipo-otro-btn tipo-otro-confirmar" onClick={confirmarOtroChip} disabled={!textoOtroChip} aria-label="Confirmar">
+                <Check size={15} strokeWidth={2.6} />
+              </button>
+            </div>
+          ) : (
+            <div className={`tipo-chips ${ES_IOS ? "tipo-chips-ios" : ""}`}>
+              {TIPOS_INGRESO.map((t) => {
+                const { Icono } = t;
+                const activo = tipoParcial === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={`tipo-chip tipo-color-${t.color} ${activo ? "active" : ""}`}
+                    aria-pressed={activo}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setTipoParcial(activo ? null : t.id)}
+                  >
+                    <span className="tipo-chip-header">
+                      <Icono size={ES_IOS ? 15 : 16} />
+                      <span className="tipo-chip-sigla">{t.label}</span>
+                    </span>
+                    <span className="tipo-chip-nombre">{t.nombre}</span>
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                className={`tipo-chip tipo-color-neutro ${tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "active" : ""}`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  if (tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
+                    setTipoParcial(null);
+                    return;
+                  }
+                  setTextoOtroChip("");
+                  setChipsModoOtro(true);
+                }}
+              >
+                <span className="tipo-chip-header">
+                  <Pencil size={ES_IOS ? 15 : 16} strokeWidth={2.2} />
+                  <span className="tipo-chip-sigla">
+                    {tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? tipoParcial.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "Otro"}
                   </span>
-                  <span className="tipo-chip-nombre">{t.nombre}</span>
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              className={`tipo-chip tipo-color-neutro ${tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "active" : ""}`}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                if (tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
-                  setTipoParcial(null);
-                  return;
-                }
-                const valor = pedirSiglaPersonalizada();
-                if (valor) setTipoParcial(valor);
-              }}
-            >
-              <span className="tipo-chip-header">
-                <Pencil size={ES_IOS ? 15 : 16} strokeWidth={2.2} />
-                <span className="tipo-chip-sigla">
-                  {tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? tipoParcial.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "Otro"}
                 </span>
-              </span>
-              <span className="tipo-chip-nombre">Sigla propia (hasta 3 letras)</span>
-            </button>
-          </div>
+                <span className="tipo-chip-nombre">Sigla propia (hasta 3 letras)</span>
+              </button>
+            </div>
+          )}
           <div className="balance-parcial-form">
             <Field ref={campoTotalRef} label="Vol. Total" unit="ml" value={campoTotal} onChange={(v) => actualizarCampoParcial("total", v)} enterKeyHint="next" onKeyDown={irAPaso} />
             <Field ref={campoPasoRef} label="Pasó" unit="ml" value={campoPaso} onChange={(v) => actualizarCampoParcial("paso", v)} enterKeyHint="next" onKeyDown={irAQuedo} />
@@ -4126,6 +4215,17 @@ export default function App() {
           z-index: 50;
           overflow: hidden;
         }
+        /* El editor de sigla personalizada necesita más ancho que la lista
+           de siglas (input + contador + 2 botones): se ensancha el
+           desplegable solo mientras lo contiene. */
+        .tipo-dropdown-list:has(.tipo-otro-editor) {
+          min-width: 240px;
+          overflow: visible;
+        }
+        .tipo-dropdown-list .tipo-otro-editor {
+          border: none;
+          border-radius: 14px;
+        }
         .tipo-dropdown-scroll {
           max-height: 320px;
           overflow-y: auto;
@@ -4156,7 +4256,76 @@ export default function App() {
           font-weight: 800;
         }
         .tipo-dropdown-quitar { justify-content: center; }
-        .tipo-dropdown-quitar .tipo-dropdown-sigla { color: var(--text-tertiary); font-weight: 700; }        .balance-tabla-input {
+        .tipo-dropdown-quitar .tipo-dropdown-sigla { color: var(--text-tertiary); font-weight: 700; }
+        /* Editor inline de sigla personalizada ("Otro"): reemplaza tanto la
+           fila de chips (al cargar un suero nuevo) como la lista del
+           desplegable (al reasignar una fila ya cargada) mientras se
+           escribe, en vez de un prompt() nativo del navegador que tapa la
+           app con una ventana ajena al diseño. */
+        .tipo-otro-editor {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 12px;
+          border: 1px solid var(--accent-green-border);
+          border-radius: 12px;
+          background: var(--bg-panel);
+          color: var(--text-secondary);
+        }
+        .tipo-otro-editor-chips {
+          margin-bottom: 10px;
+        }
+        .tipo-otro-label {
+          font-size: 13px;
+          font-weight: 800;
+          white-space: nowrap;
+        }
+        .tipo-otro-input {
+          flex: 1;
+          min-width: 0;
+          background: var(--bg-panel-alt);
+          border: 1px solid var(--border-panel);
+          border-radius: 8px;
+          padding: 7px 10px;
+          font-size: 14px;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          color: var(--text-primary);
+          outline: none;
+        }
+        .tipo-otro-input:focus {
+          border-color: var(--accent-green-border);
+        }
+        .tipo-otro-contador {
+          font-size: 11px;
+          color: var(--text-tertiary);
+          white-space: nowrap;
+        }
+        .tipo-otro-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 30px;
+          height: 30px;
+          flex-shrink: 0;
+          border-radius: 50%;
+          border: none;
+          cursor: pointer;
+          touch-action: manipulation;
+        }
+        .tipo-otro-cancelar {
+          background: var(--bg-panel-alt);
+          color: var(--text-tertiary);
+        }
+        .tipo-otro-confirmar {
+          background: var(--accent-green);
+          color: var(--bg-app);
+        }
+        .tipo-otro-confirmar:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        .balance-tabla-input {
           width: 100%;
           height: 100%;
           border: none;
