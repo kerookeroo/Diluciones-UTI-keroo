@@ -2002,6 +2002,13 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
   };
 
   const agregarIngresoParcial = () => {
+    // Si el editor de "Otro" quedó abierto con una sigla tipeada pero sin
+    // tocar el ✓ (ej. el usuario pasó directo a completar Vol.Total y
+    // "Agregar a Ingresos"), se usa esa sigla igual en vez de perderla y
+    // agregar la fila sin tipo — es el dato que el usuario claramente ya
+    // había decidido, solo faltaba el toque de confirmación.
+    const tipoAUsar = chipsModoOtro && textoOtroChip ? normalizarSiglaPersonalizada(textoOtroChip) : tipoParcial;
+
     let nTotal = num(campoTotal);
     let nPaso = num(campoPaso);
     let nQuedo = num(campoQuedo);
@@ -2033,13 +2040,15 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
       return;
     }
 
-    const item = { id: idParcialRef.current++, total: nTotal, paso: nPaso, quedo: nQuedo, tipo: tipoParcial };
+    const item = { id: idParcialRef.current++, total: nTotal, paso: nPaso, quedo: nQuedo, tipo: tipoAUsar };
     setIngresosParcial((arr) => [...arr, item]);
     setAvisoParcial("");
     setCampoTotal("");
     setCampoPaso("");
     setCampoQuedo("");
     setTipoParcial(null);
+    setChipsModoOtro(false);
+    setTextoOtroChip("");
     ordenCamposRef.current = ["total", "paso", "quedo"];
     // Foco automático en "Vol. Total" para cargar el siguiente suero/plan sin
     // tener que tocar el campo a mano cada vez.
