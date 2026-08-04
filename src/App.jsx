@@ -1769,6 +1769,31 @@ const TIPOS_INGRESO = [
 
 const TIPOS_INGRESO_POR_ID = Object.fromEntries(TIPOS_INGRESO.map((t) => [t.id, t]));
 
+// Además del catálogo fijo, cualquier fila puede llevar una sigla propia de
+// hasta 3 letras (ej. "NTG", "NPT", "FNT", "MDZ" — drogas puntuales de la
+// UTI que no ameritan agregarse al catálogo general). Se guarda con un
+// prefijo ("custom:NTG") en el mismo campo `tipo` para no tener que tocar el
+// modelo de datos ni la serialización a localStorage; esta función resuelve
+// cualquiera de los dos casos (catálogo fijo o sigla personalizada) al mismo
+// shape { label, nombre, color, Icono } que ya consume el resto del código.
+const PREFIJO_TIPO_PERSONALIZADO = "custom:";
+
+function resolverDefTipo(tipoValue) {
+  if (!tipoValue) return null;
+  if (tipoValue.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
+    const sigla = tipoValue.slice(PREFIJO_TIPO_PERSONALIZADO.length);
+    return { label: sigla, nombre: "Sigla personalizada", color: "neutro", Icono: null };
+  }
+  return TIPOS_INGRESO_POR_ID[tipoValue] || null;
+}
+
+function pedirSiglaPersonalizada() {
+  const entrada = window.prompt("Sigla del medicamento (hasta 3 letras, ej: NTG)", "");
+  if (entrada == null) return null;
+  const limpio = entrada.trim().toUpperCase().slice(0, 3);
+  return limpio ? PREFIJO_TIPO_PERSONALIZADO + limpio : null;
+}
+
 // Claves de localStorage para Balance. Mismo mecanismo ya probado que usa
 // esta app para persistir el tema (ver toggleTheme más abajo): así lo
 // cargado en Balance sobrevive a que el usuario cambie de pestaña, minimice
@@ -2306,17 +2331,17 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                   <div
                     role="button"
                     tabIndex={0}
-                    className={`balance-tabla-col-tipo ${filaEligiendoTipo === it.id ? "tipo-abierto" : ""} ${it.tipo ? `tipo-color-${TIPOS_INGRESO_POR_ID[it.tipo]?.color}` : "balance-tabla-col-tipo-vacia"}`}
+                    className={`balance-tabla-col-tipo ${filaEligiendoTipo === it.id ? "tipo-abierto" : ""} ${it.tipo ? `tipo-color-${resolverDefTipo(it.tipo)?.color}` : "balance-tabla-col-tipo-vacia"}`}
                     onClick={() => setFilaEligiendoTipo(filaEligiendoTipo === it.id ? null : it.id)}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setFilaEligiendoTipo(filaEligiendoTipo === it.id ? null : it.id); }}
                   >
                     {(() => {
-                      const def = it.tipo ? TIPOS_INGRESO_POR_ID[it.tipo] : null;
+                      const def = resolverDefTipo(it.tipo);
                       if (!def) return <Plus size={16} strokeWidth={2.4} />;
                       const { Icono } = def;
                       return (
                         <>
-                          <Icono />
+                          {Icono ? <Icono /> : <Pencil size={15} strokeWidth={2.2} />}
                           <span className="balance-tipo-sigla">{def.label}</span>
                         </>
                       );
@@ -2338,6 +2363,19 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                                 </button>
                               );
                             })}
+                            <button
+                              type="button"
+                              className={`tipo-dropdown-item tipo-color-neutro ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
+                              onClick={() => {
+                                const valor = pedirSiglaPersonalizada();
+                                if (valor) asignarTipoAFila(it.id, valor);
+                              }}
+                            >
+                              <Pencil size={18} strokeWidth={2.2} />
+                              <span className="tipo-dropdown-sigla">
+                                {it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? it.tipo.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "Otro"}
+                              </span>
+                            </button>
                             <button
                               type="button"
                               className="tipo-dropdown-item tipo-dropdown-quitar"
@@ -2435,6 +2473,27 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                 </button>
               );
             })}
+            <button
+              type="button"
+              className={`tipo-chip tipo-color-neutro ${tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "active" : ""}`}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                if (tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
+                  setTipoParcial(null);
+                  return;
+                }
+                const valor = pedirSiglaPersonalizada();
+                if (valor) setTipoParcial(valor);
+              }}
+            >
+              <span className="tipo-chip-header">
+                <Pencil size={ES_IOS ? 15 : 16} strokeWidth={2.2} />
+                <span className="tipo-chip-sigla">
+                  {tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? tipoParcial.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "Otro"}
+                </span>
+              </span>
+              <span className="tipo-chip-nombre">Sigla propia (hasta 3 letras)</span>
+            </button>
           </div>
           <div className="balance-parcial-form">
             <Field ref={campoTotalRef} label="Vol. Total" unit="ml" value={campoTotal} onChange={(v) => actualizarCampoParcial("total", v)} enterKeyHint="next" onKeyDown={irAPaso} />
@@ -3954,6 +4013,7 @@ export default function App() {
         .tipo-color-verde { color: var(--accent-green); }
         .tipo-color-naranja { color: var(--accent-orange); }
         .tipo-color-rojo { color: var(--accent-red); }
+        .tipo-color-neutro { color: var(--text-secondary); }
         /* Igual que con .balance-tabla-col-paso: una clase sola pierde contra
            ".balance-tabla-fila > div" (que fija color: var(--text-primary)) y
            el color del tipo no se vería. Se repiten en forma compuesta. */
@@ -3962,6 +4022,7 @@ export default function App() {
         .balance-tabla-fila > div.tipo-color-verde { color: var(--accent-green); }
         .balance-tabla-fila > div.tipo-color-naranja { color: var(--accent-orange); }
         .balance-tabla-fila > div.tipo-color-rojo { color: var(--accent-red); }
+        .balance-tabla-fila > div.tipo-color-neutro { color: var(--text-secondary); }
         /* Chips de selección de tipo en el formulario de carga: una sola
            fila continua dentro de un contenedor con línea divisoria entre
            ítems (no tarjetas individuales), igual que el diseño de
