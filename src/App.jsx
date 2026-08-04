@@ -4699,6 +4699,16 @@ export default function App() {
           display: flex;
           padding: 8px 12px calc(4px + env(safe-area-inset-bottom));
           gap: 6px;
+          transition: transform 0.2s ease;
+        }
+        /* Con el teclado abierto, position:fixed se reancla al borde
+           inferior del viewport VISUAL (que ahora termina justo arriba del
+           teclado), no al borde real de la pantalla — por eso la tabbar
+           aparecía flotando encima del teclado en vez de quedar oculta
+           detrás. Se la corre fuera de vista mientras tecladoAbierto es
+           true (mismo detector que ya usa el header). */
+        .tabbar.tabbar-teclado-abierto {
+          transform: translateY(100%);
         }
         .tab-btn {
           flex: 1;
@@ -4782,7 +4792,7 @@ export default function App() {
         </div>
       </div>
 
-      <div className="tabbar">
+      <div className={`tabbar ${tecladoAbierto ? "tabbar-teclado-abierto" : ""}`}>
         <button className={`tab-btn ${tab === "inicio" ? "active" : ""}`} onClick={() => cambiarTab("inicio")}>
           <Home size={20} />
           Inicio
