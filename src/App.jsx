@@ -4217,9 +4217,14 @@ export default function App() {
         }
         /* El editor de sigla personalizada necesita más ancho que la lista
            de siglas (input + contador + 2 botones): se ensancha el
-           desplegable solo mientras lo contiene. */
+           desplegable solo mientras lo contiene. Ancho FIJO (no min-width):
+           un input flex:1 dentro de un contenedor position:absolute con
+           width:auto calcula su ancho por "shrink-to-fit", que en varios
+           motores termina estirando el input mucho más de lo necesario y
+           empuja el botón de confirmar fuera de la pantalla. Con un ancho
+           fijo (acotado al viewport) ese cálculo ambiguo desaparece. */
         .tipo-dropdown-list:has(.tipo-otro-editor) {
-          min-width: 240px;
+          width: min(260px, calc(100vw - 48px));
           overflow: visible;
         }
         .tipo-dropdown-list .tipo-otro-editor {
