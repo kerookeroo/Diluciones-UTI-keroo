@@ -2875,23 +2875,58 @@ export default function App() {
 
   // Safari iOS ancla position:fixed al "layout viewport" (el tamaño
   // completo de la página), no al "visual viewport" (lo que realmente
-  // se ve cuando el teclado está abierto). Esto hace que un header fixed
-  // pueda terminar mal posicionado o "tapado" mientras el teclado está
-  // abierto o en transición de cierre. Detectamos esa diferencia de
-  // tamaño y, mientras exista, cambiamos el header de fixed a absolute,
-  // que sí respeta el flujo normal del documento sin esa ambigüedad.
+  // se ve cuando el teclado está abierto). Esto hace que un header/tabbar
+  // fixed puedan terminar mal posicionados o "tapados" mientras el teclado
+  // está abierto o en transición de cierre.
+  //
+  // Detectar esto SOLO por la diferencia de altura de visualViewport
+  // (como se hacía antes) resultó no ser confiable: según la versión de
+  // iOS y si la app corre en Safari normal o instalada como PWA, el
+  // teclado a veces NO dispara 'resize' en visualViewport — en cambio
+  // desplaza la vista visual sin achicar su altura, y esa detección nunca
+  // se activaba (bug reportado y confirmado: la tabbar seguía apareciendo
+  // encima del teclado). Ahora la señal principal es el foco: apenas se
+  // enfoca un input/textarea se considera el teclado abierto, sin
+  // depender de ninguna medición de viewport. visualViewport se mantiene
+  // como señal secundaria (por si en algún caso el teclado ocupa espacio
+  // sin que haya un campo enfocado, ej. autocompletado nativo).
   const [tecladoAbierto, setTecladoAbierto] = useState(false);
 
   useEffect(() => {
-    if (!window.visualViewport) return;
-    const vv = window.visualViewport;
-    const checkViewport = () => {
-      const diff = window.innerHeight - vv.height;
-      setTecladoAbierto(diff > 80);
+    const TIPOS_INPUT_SIN_TECLADO = ["button", "checkbox", "radio", "range", "submit", "reset", "file", "color", "image"];
+    const esCampoDeTexto = (el) => {
+      if (!el) return false;
+      if (el.tagName === "TEXTAREA") return true;
+      if (el.tagName === "INPUT") return !TIPOS_INPUT_SIN_TECLADO.includes((el.type || "text").toLowerCase());
+      return false;
     };
-    checkViewport();
-    vv.addEventListener("resize", checkViewport);
-    return () => vv.removeEventListener("resize", checkViewport);
+
+    let focoEnCampo = false;
+    let viewportAchicado = false;
+    const actualizar = () => setTecladoAbierto(focoEnCampo || viewportAchicado);
+
+    const onFocusIn = (e) => { focoEnCampo = esCampoDeTexto(e.target); actualizar(); };
+    const onFocusOut = () => { focoEnCampo = false; actualizar(); };
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
+
+    let quitarListenerVV = () => {};
+    if (window.visualViewport) {
+      const vv = window.visualViewport;
+      const checkViewport = () => {
+        viewportAchicado = window.innerHeight - vv.height > 80;
+        actualizar();
+      };
+      checkViewport();
+      vv.addEventListener("resize", checkViewport);
+      quitarListenerVV = () => vv.removeEventListener("resize", checkViewport);
+    }
+
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
+      quitarListenerVV();
+    };
   }, []);
 
   // Escalado global de la UI (reemplazo definitivo del viejo zoom).
