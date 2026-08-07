@@ -4366,11 +4366,14 @@ export default function App() {
         /* El fondo del ítem activo usa el color propio del tipo
            (currentColor, ya fijado por .tipo-color-*) en vez de un verde
            fijo — con un tipo no verde (ej. "Personalizar" en turquesa) un
-           fondo verde detrás quedaba inconsistente. */
+           fondo verde detrás quedaba inconsistente. Antes tenía además un
+           border-left para reforzar la marca, pero un borde recto sobre un
+           botón con esquinas redondeadas no sigue la curva: sobresalía en
+           las puntas y se veía como una sombra/corchete pegado al borde.
+           Con el fondo tinturado solo (que sí respeta el border-radius,
+           como cualquier background) alcanza para marcar el activo. */
         .tipo-dropdown-item.activo {
           background: color-mix(in srgb, currentColor 14%, transparent);
-          border-left: 3px solid currentColor;
-          padding-left: 9px;
         }
         .tipo-dropdown-sigla {
           font-size: 14.5px;
