@@ -1753,6 +1753,30 @@ function IconoVaso({ size = 19 }) {
   );
 }
 
+// Ícono de la opción "Personalizar" (sigla propia): un lápiz dentro de un
+// recuadro, en vez del lápiz suelto de antes, para que se distinga de un
+// vistazo como un ítem EDITABLE y no como un tipo fijo más del catálogo.
+function IconoPersonalizar({ size = 19 }) {
+  const grosor = Math.max(1.3, size / 13);
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: size,
+        height: size,
+        border: `${grosor}px solid currentColor`,
+        borderRadius: size / 3.5,
+        flexShrink: 0,
+        boxSizing: "border-box",
+      }}
+    >
+      <Pencil size={size * 0.62} strokeWidth={2.4} />
+    </span>
+  );
+}
+
 // Catálogo de tipos de ingreso del turno. IMPORTANTE: esto es puramente
 // descriptivo — etiqueta de qué era cada volumen. NO cambia ninguna cuenta:
 // el "Total Ingresos" sigue sumando la columna "Pasó" de todas las filas,
@@ -1781,7 +1805,7 @@ function resolverDefTipo(tipoValue) {
   if (!tipoValue) return null;
   if (tipoValue.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
     const sigla = tipoValue.slice(PREFIJO_TIPO_PERSONALIZADO.length);
-    return { label: sigla, nombre: "Sigla personalizada", color: "indigo", Icono: null };
+    return { label: sigla, nombre: "Sigla personalizada", color: "turquesa", Icono: null };
   }
   return TIPOS_INGRESO_POR_ID[tipoValue] || null;
 }
@@ -2382,7 +2406,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                       const { Icono } = def;
                       return (
                         <>
-                          {Icono ? <Icono /> : <Pencil size={15} strokeWidth={2.2} />}
+                          {Icono ? <Icono /> : <IconoPersonalizar size={16} />}
                           <span className="balance-tipo-sigla">{def.label}</span>
                         </>
                       );
@@ -2391,8 +2415,8 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                       <div className="tipo-dropdown-list" onClick={(e) => e.stopPropagation()}>
                         {dropdownModoOtro ? (
                           <div className="tipo-otro-editor">
-                            <Pencil size={16} strokeWidth={2.2} />
-                            <span className="tipo-otro-label">Otro</span>
+                            <IconoPersonalizar size={16} />
+                            <span className="tipo-otro-label">Personalizar</span>
                             <input
                               type="text"
                               className="tipo-otro-input"
@@ -2433,16 +2457,21 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                               })}
                               <button
                                 type="button"
-                                className={`tipo-dropdown-item tipo-color-indigo ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
+                                className={`tipo-dropdown-item tipo-color-turquesa ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
                                 onClick={() => {
                                   setTextoOtroFila(it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? it.tipo.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "");
                                   setDropdownModoOtro(true);
                                 }}
                               >
-                                <Pencil size={18} strokeWidth={2.2} />
-                                <span className="tipo-dropdown-sigla">
-                                  {it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? it.tipo.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "Otro"}
-                                </span>
+                                <IconoPersonalizar size={20} />
+                                {it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? (
+                                  <span className="tipo-dropdown-sigla">{it.tipo.slice(PREFIJO_TIPO_PERSONALIZADO.length)}</span>
+                                ) : (
+                                  <span className="tipo-dropdown-textos">
+                                    <span className="tipo-dropdown-sigla">Personalizar</span>
+                                    <span className="tipo-dropdown-subtexto">Editar siglas</span>
+                                  </span>
+                                )}
                               </button>
                           </div>
                         )}
@@ -2516,8 +2545,8 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
           <div className="section-title">Suero infundiendo/infundido</div>
           {chipsModoOtro ? (
             <div className="tipo-otro-editor tipo-otro-editor-chips">
-              <Pencil size={16} strokeWidth={2.2} />
-              <span className="tipo-otro-label">Otro</span>
+              <IconoPersonalizar size={16} />
+              <span className="tipo-otro-label">Personalizar</span>
               <input
                 type="text"
                 className="tipo-otro-input"
@@ -2564,7 +2593,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
               })}
               <button
                 type="button"
-                className={`tipo-chip tipo-color-indigo ${tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "active" : ""}`}
+                className={`tipo-chip tipo-color-turquesa ${tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "active" : ""}`}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   if (tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
@@ -2576,12 +2605,12 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                 }}
               >
                 <span className="tipo-chip-header">
-                  <Pencil size={ES_IOS ? 15 : 16} strokeWidth={2.2} />
+                  <IconoPersonalizar size={ES_IOS ? 15 : 16} />
                   <span className="tipo-chip-sigla">
-                    {tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? tipoParcial.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "Otro"}
+                    {tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? tipoParcial.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "Personalizar"}
                   </span>
                 </span>
-                <span className="tipo-chip-nombre">Sigla propia (hasta 3 letras)</span>
+                <span className="tipo-chip-nombre">Editar siglas</span>
               </button>
             </div>
           )}
@@ -4138,7 +4167,7 @@ export default function App() {
         .tipo-color-verde { color: var(--accent-green); }
         .tipo-color-naranja { color: var(--accent-orange); }
         .tipo-color-rojo { color: var(--accent-red); }
-        .tipo-color-indigo { color: #4F46E5; }
+        .tipo-color-turquesa { color: #0EA5A8; }
         /* Igual que con .balance-tabla-col-paso: una clase sola pierde contra
            ".balance-tabla-fila > div" (que fija color: var(--text-primary)) y
            el color del tipo no se vería. Se repiten en forma compuesta. */
@@ -4147,7 +4176,7 @@ export default function App() {
         .balance-tabla-fila > div.tipo-color-verde { color: var(--accent-green); }
         .balance-tabla-fila > div.tipo-color-naranja { color: var(--accent-orange); }
         .balance-tabla-fila > div.tipo-color-rojo { color: var(--accent-red); }
-        .balance-tabla-fila > div.tipo-color-indigo { color: #4F46E5; }
+        .balance-tabla-fila > div.tipo-color-turquesa { color: #0EA5A8; }
         /* Chips de selección de tipo en el formulario de carga: una sola
            fila continua dentro de un contenedor con línea divisoria entre
            ítems (no tarjetas individuales), igual que el diseño de
@@ -4291,10 +4320,28 @@ export default function App() {
           text-align: left;
         }
         .tipo-dropdown-item:active { background: var(--bg-panel-alt); }
-        .tipo-dropdown-item.activo { background: var(--box-green-bg); }
+        /* El fondo del ítem activo usa el color propio del tipo
+           (currentColor, ya fijado por .tipo-color-*) en vez de un verde
+           fijo — con un tipo no verde (ej. "Personalizar" en turquesa) un
+           fondo verde detrás quedaba inconsistente. */
+        .tipo-dropdown-item.activo {
+          background: color-mix(in srgb, currentColor 14%, transparent);
+          border-left: 3px solid currentColor;
+          padding-left: 9px;
+        }
         .tipo-dropdown-sigla {
           font-size: 14.5px;
           font-weight: 800;
+        }
+        .tipo-dropdown-textos {
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+        }
+        .tipo-dropdown-subtexto {
+          font-size: 11.5px;
+          font-weight: 600;
+          color: var(--text-tertiary);
         }
         /* Editor inline de sigla personalizada ("Otro"): reemplaza tanto la
            fila de chips (al cargar un suero nuevo) como la lista del
