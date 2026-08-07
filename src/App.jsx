@@ -2537,7 +2537,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                     )}
                   </div>
 
-                  <div>{fmtDosis(it.total, 2)}</div>
+                  <div className="balance-tabla-col-total">{fmtDosis(it.total, 2)}</div>
 
                   {celdaEditando?.id === it.id && celdaEditando?.campo === "paso" ? (
                     <input
@@ -4185,6 +4185,9 @@ export default function App() {
         .balance-tabla-fila > div.balance-tabla-col-paso {
           color: var(--accent-green);
           font-size: 19px;
+        }
+        .balance-tabla-fila > div.balance-tabla-col-total {
+          color: var(--text-secondary);
         }
         .balance-tabla-fila > div.balance-tabla-col-quedo {
           font-size: 13px;
