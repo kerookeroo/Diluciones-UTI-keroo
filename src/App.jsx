@@ -1759,7 +1759,7 @@ function IconoVaso({ size = 19 }) {
 // chicos el borde del recuadro se pisaba con el trazo del lápiz y se veía
 // como una línea suelta rara ("corchete"). Vuelve a ser el lápiz solo; la
 // distinción ya la dan el label "Personalizar"/"Editar siglas" y el color
-// rosa propio.
+// índigo propio.
 function IconoPersonalizar({ size = 19 }) {
   return <Pencil size={size} strokeWidth={2.2} />;
 }
@@ -1792,7 +1792,7 @@ function resolverDefTipo(tipoValue) {
   if (!tipoValue) return null;
   if (tipoValue.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
     const sigla = tipoValue.slice(PREFIJO_TIPO_PERSONALIZADO.length);
-    return { label: sigla, nombre: "Sigla personalizada", color: "rosa", Icono: null };
+    return { label: sigla, nombre: "Sigla personalizada", color: "indigo", Icono: null };
   }
   return TIPOS_INGRESO_POR_ID[tipoValue] || null;
 }
@@ -2515,7 +2515,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                               })}
                               <button
                                 type="button"
-                                className={`tipo-dropdown-item tipo-color-rosa ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
+                                className={`tipo-dropdown-item tipo-color-indigo ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
                                 onClick={() => {
                                   setTextoOtroFila(it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? it.tipo.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "");
                                   abrirEditorOtroFila();
@@ -2650,7 +2650,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
               })}
               <button
                 type="button"
-                className={`tipo-chip tipo-color-rosa ${tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "active" : ""}`}
+                className={`tipo-chip tipo-color-indigo ${tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "active" : ""}`}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   if (tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
@@ -3173,7 +3173,7 @@ export default function App() {
           --accent-red-pale: #F4C7C7;
           --accent-red-border: #D14242;
           --accent-violet: #BF5AF2;
-          --accent-blue: #4DA3E8;
+          --accent-blue: #38BDF8;
           --accent-orange: #FF9F0A;
           --accent-orange-deep: #E08A3D;
           --accent-yellow: #FFD60A;
@@ -3233,7 +3233,7 @@ export default function App() {
           --accent-red-pale: #7A2A26;
           --accent-red-border: #D14242;
           --accent-violet: #8A3FC4;
-          --accent-blue: #1B6FA8;
+          --accent-blue: #0284C7;
           --accent-orange: #C97200;
           --accent-orange-deep: #A8631F;
           --accent-yellow: #9C7E00;
@@ -4224,7 +4224,7 @@ export default function App() {
         .tipo-color-verde { color: var(--accent-green); }
         .tipo-color-naranja { color: var(--accent-orange); }
         .tipo-color-rojo { color: var(--accent-red); }
-        .tipo-color-rosa { color: #FF2D55; }
+        .tipo-color-indigo { color: #5856D6; }
         /* Igual que con .balance-tabla-col-paso: una clase sola pierde contra
            ".balance-tabla-fila > div" (que fija color: var(--text-primary)) y
            el color del tipo no se vería. Se repiten en forma compuesta. */
@@ -4233,7 +4233,7 @@ export default function App() {
         .balance-tabla-fila > div.tipo-color-verde { color: var(--accent-green); }
         .balance-tabla-fila > div.tipo-color-naranja { color: var(--accent-orange); }
         .balance-tabla-fila > div.tipo-color-rojo { color: var(--accent-red); }
-        .balance-tabla-fila > div.tipo-color-rosa { color: #FF2D55; }
+        .balance-tabla-fila > div.tipo-color-indigo { color: #5856D6; }
         /* Chips de selección de tipo en el formulario de carga: una sola
            fila continua dentro de un contenedor con línea divisoria entre
            ítems (no tarjetas individuales), igual que el diseño de
@@ -4379,7 +4379,7 @@ export default function App() {
         .tipo-dropdown-item:active { background: var(--bg-panel-alt); }
         /* El fondo del ítem activo usa el color propio del tipo
            (currentColor, ya fijado por .tipo-color-*) en vez de un verde
-           fijo — con un tipo no verde (ej. "Personalizar" en rosa) un
+           fijo — con un tipo no verde (ej. "Personalizar" en índigo) un
            fondo verde detrás quedaba inconsistente. Antes tenía además un
            border-left para reforzar la marca, pero un borde recto sobre un
            botón con esquinas redondeadas no sigue la curva: sobresalía en
