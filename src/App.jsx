@@ -2474,12 +2474,17 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                       <div className="tipo-dropdown-list" onClick={(e) => e.stopPropagation()}>
                         {dropdownModoOtro ? (
                           <div className="tipo-otro-editor">
+                            {(() => {
+                              const actual = resolverDefTipo(it.tipo);
+                              if (!actual) return null;
+                              return <span className={`tipo-otro-actual tipo-color-${actual.color}`}>{actual.label}</span>;
+                            })()}
                             <IconoPersonalizar size={16} />
                             <input
                               ref={campoOtroFilaRef}
                               type="text"
                               className="tipo-otro-input"
-                              placeholder="Hasta 3 letras"
+                              placeholder="3 letras"
                               value={textoOtroFila}
                               maxLength={3}
                               enterKeyHint="done"
@@ -4423,6 +4428,18 @@ export default function App() {
         }
         .tipo-otro-editor-chips {
           margin-bottom: 10px;
+        }
+        /* Indicador del tipo actual de la fila que se está reasignando: sin
+           esto, al tocar "Personalizar" desde el desplegable de una fila ya
+           cargada, el editor no dejaba ningún rastro de qué fila/tipo se
+           estaba por reemplazar. */
+        .tipo-otro-actual {
+          flex-shrink: 0;
+          font-size: 11px;
+          font-weight: 800;
+          padding-right: 8px;
+          border-right: 1px solid var(--border-panel);
+          opacity: 0.75;
         }
         .tipo-otro-input {
           flex: 1;
