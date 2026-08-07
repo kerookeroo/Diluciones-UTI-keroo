@@ -1802,6 +1802,35 @@ function normalizarSiglaPersonalizada(texto) {
   return limpio ? PREFIJO_TIPO_PERSONALIZADO + limpio : null;
 }
 
+// El scrollIntoView llamado apenas se enfoca el campo (necesario para que
+// iOS abra el teclado, ver abrirEditorOtroChip/Fila) queda obsoleto: el
+// teclado recién termina de animar SEGUNDOS después, y en ese momento el
+// propio Safari hace SU auto-scroll para "revelar" el campo — el cual, en
+// esta pantalla, se pasa de largo (bug reportado y confirmado dos veces:
+// primero sin foco sincrónico, y de nuevo acá con foco sincrónico). La
+// solución es reaplicar nuestro scrollIntoView justo cuando el teclado
+// termina de abrirse: ese momento se detecta por el resize de
+// visualViewport (se achica cuando el teclado ya está arriba). Con un
+// timeout de respaldo por si el navegador no dispara ese resize.
+function reafirmarScrollAlAbrirTeclado(elRef) {
+  if (!window.visualViewport) {
+    setTimeout(() => elRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }), 350);
+    return;
+  }
+  const vv = window.visualViewport;
+  let hecho = false;
+  const corregir = () => {
+    if (hecho) return;
+    hecho = true;
+    elRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    vv.removeEventListener("resize", corregir);
+  };
+  vv.addEventListener("resize", corregir);
+  // Respaldo: si por lo que sea el teclado no dispara resize (ej. ya
+  // estaba abierto de un campo anterior), igual se corrige una vez.
+  setTimeout(corregir, 400);
+}
+
 // Claves de localStorage para Balance. Mismo mecanismo ya probado que usa
 // esta app para persistir el tema (ver toggleTheme más abajo): así lo
 // cargado en Balance sobrevive a que el usuario cambie de pestaña, minimice
@@ -1979,6 +2008,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
     flushSync(() => setChipsModoOtro(true));
     campoOtroChipRef.current?.focus();
     campoOtroChipRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    reafirmarScrollAlAbrirTeclado(campoOtroChipRef);
   };
   const idParcialRef = useRef(mayorIdGuardado(leerListaGuardada(K_INGRESOS_PARCIAL), leerListaGuardada(K_EGRESOS_PARCIAL)) + 1);
   const campoTotalRef = useRef(null);
@@ -2168,6 +2198,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
     flushSync(() => setDropdownModoOtro(true));
     campoOtroFilaRef.current?.focus();
     campoOtroFilaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    reafirmarScrollAlAbrirTeclado(campoOtroFilaRef);
   };
 
   // Cierre al tocar fuera del dropdown. Antes esto lo hacía un overlay con
