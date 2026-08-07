@@ -1781,7 +1781,7 @@ function resolverDefTipo(tipoValue) {
   if (!tipoValue) return null;
   if (tipoValue.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
     const sigla = tipoValue.slice(PREFIJO_TIPO_PERSONALIZADO.length);
-    return { label: sigla, nombre: "Sigla personalizada", color: "amarillo", Icono: null };
+    return { label: sigla, nombre: "Sigla personalizada", color: "turquesa", Icono: null };
   }
   return TIPOS_INGRESO_POR_ID[tipoValue] || null;
 }
@@ -2433,7 +2433,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                               })}
                               <button
                                 type="button"
-                                className={`tipo-dropdown-item tipo-color-amarillo ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
+                                className={`tipo-dropdown-item tipo-color-turquesa ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
                                 onClick={() => {
                                   setTextoOtroFila(it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? it.tipo.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "");
                                   setDropdownModoOtro(true);
@@ -2571,7 +2571,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
               })}
               <button
                 type="button"
-                className={`tipo-chip tipo-color-amarillo ${tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "active" : ""}`}
+                className={`tipo-chip tipo-color-turquesa ${tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "active" : ""}`}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   if (tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
@@ -4145,7 +4145,7 @@ export default function App() {
         .tipo-color-verde { color: var(--accent-green); }
         .tipo-color-naranja { color: var(--accent-orange); }
         .tipo-color-rojo { color: var(--accent-red); }
-        .tipo-color-amarillo { color: var(--accent-yellow-soft); }
+        .tipo-color-turquesa { color: #0EA5A8; }
         /* Igual que con .balance-tabla-col-paso: una clase sola pierde contra
            ".balance-tabla-fila > div" (que fija color: var(--text-primary)) y
            el color del tipo no se vería. Se repiten en forma compuesta. */
@@ -4154,7 +4154,7 @@ export default function App() {
         .balance-tabla-fila > div.tipo-color-verde { color: var(--accent-green); }
         .balance-tabla-fila > div.tipo-color-naranja { color: var(--accent-orange); }
         .balance-tabla-fila > div.tipo-color-rojo { color: var(--accent-red); }
-        .balance-tabla-fila > div.tipo-color-amarillo { color: var(--accent-yellow-soft); }
+        .balance-tabla-fila > div.tipo-color-turquesa { color: #0EA5A8; }
         /* Chips de selección de tipo en el formulario de carga: una sola
            fila continua dentro de un contenedor con línea divisoria entre
            ítems (no tarjetas individuales), igual que el diseño de
@@ -4298,7 +4298,17 @@ export default function App() {
           text-align: left;
         }
         .tipo-dropdown-item:active { background: var(--bg-panel-alt); }
-        .tipo-dropdown-item.activo { background: var(--box-green-bg); }
+        /* Antes usaba siempre un fondo verde fijo para marcar el ítem
+           activo, sin importar su color propio — quedaba mal en un tipo
+           que no fuera verde (ej. "Otro" en turquesa). Ahora usa el color
+           del propio ítem (currentColor, ya fijado por .tipo-color-*) con
+           opacidad baja de fondo + un borde izquierdo, así el resaltado
+           siempre combina con el tipo que representa. */
+        .tipo-dropdown-item.activo {
+          background: color-mix(in srgb, currentColor 14%, transparent);
+          border-left: 3px solid currentColor;
+          padding-left: 9px;
+        }
         .tipo-dropdown-sigla {
           font-size: 14.5px;
           font-weight: 800;
