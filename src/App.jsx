@@ -1781,7 +1781,7 @@ function resolverDefTipo(tipoValue) {
   if (!tipoValue) return null;
   if (tipoValue.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
     const sigla = tipoValue.slice(PREFIJO_TIPO_PERSONALIZADO.length);
-    return { label: sigla, nombre: "Sigla personalizada", color: "amarillo", Icono: null };
+    return { label: sigla, nombre: "Sigla personalizada", color: "indigo", Icono: null };
   }
   return TIPOS_INGRESO_POR_ID[tipoValue] || null;
 }
@@ -2433,7 +2433,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                               })}
                               <button
                                 type="button"
-                                className={`tipo-dropdown-item tipo-color-amarillo ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
+                                className={`tipo-dropdown-item tipo-color-indigo ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
                                 onClick={() => {
                                   setTextoOtroFila(it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? it.tipo.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "");
                                   setDropdownModoOtro(true);
@@ -2443,13 +2443,6 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                                 <span className="tipo-dropdown-sigla">
                                   {it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? it.tipo.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "Otro"}
                                 </span>
-                              </button>
-                              <button
-                                type="button"
-                                className="tipo-dropdown-item tipo-dropdown-quitar"
-                                onClick={() => asignarTipoAFila(it.id, null)}
-                              >
-                                <span className="tipo-dropdown-sigla">—</span>
                               </button>
                           </div>
                         )}
@@ -2571,7 +2564,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
               })}
               <button
                 type="button"
-                className={`tipo-chip tipo-color-amarillo ${tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "active" : ""}`}
+                className={`tipo-chip tipo-color-indigo ${tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "active" : ""}`}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   if (tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
@@ -4145,7 +4138,7 @@ export default function App() {
         .tipo-color-verde { color: var(--accent-green); }
         .tipo-color-naranja { color: var(--accent-orange); }
         .tipo-color-rojo { color: var(--accent-red); }
-        .tipo-color-amarillo { color: var(--accent-yellow-soft); }
+        .tipo-color-indigo { color: #4F46E5; }
         /* Igual que con .balance-tabla-col-paso: una clase sola pierde contra
            ".balance-tabla-fila > div" (que fija color: var(--text-primary)) y
            el color del tipo no se vería. Se repiten en forma compuesta. */
@@ -4154,7 +4147,7 @@ export default function App() {
         .balance-tabla-fila > div.tipo-color-verde { color: var(--accent-green); }
         .balance-tabla-fila > div.tipo-color-naranja { color: var(--accent-orange); }
         .balance-tabla-fila > div.tipo-color-rojo { color: var(--accent-red); }
-        .balance-tabla-fila > div.tipo-color-amarillo { color: var(--accent-yellow-soft); }
+        .balance-tabla-fila > div.tipo-color-indigo { color: #4F46E5; }
         /* Chips de selección de tipo en el formulario de carga: una sola
            fila continua dentro de un contenedor con línea divisoria entre
            ítems (no tarjetas individuales), igual que el diseño de
@@ -4303,8 +4296,6 @@ export default function App() {
           font-size: 14.5px;
           font-weight: 800;
         }
-        .tipo-dropdown-quitar { justify-content: center; }
-        .tipo-dropdown-quitar .tipo-dropdown-sigla { color: var(--text-tertiary); font-weight: 700; }
         /* Editor inline de sigla personalizada ("Otro"): reemplaza tanto la
            fila de chips (al cargar un suero nuevo) como la lista del
            desplegable (al reasignar una fila ya cargada) mientras se
