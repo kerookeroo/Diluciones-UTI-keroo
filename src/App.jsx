@@ -2402,7 +2402,6 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                         {dropdownModoOtro ? (
                           <div className="tipo-otro-editor">
                             <IconoPersonalizar size={16} />
-                            <span className="tipo-otro-label">Personalizar</span>
                             <input
                               type="text"
                               className="tipo-otro-input"
@@ -2532,7 +2531,6 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
           {chipsModoOtro ? (
             <div className="tipo-otro-editor tipo-otro-editor-chips">
               <IconoPersonalizar size={16} />
-              <span className="tipo-otro-label">Personalizar</span>
               <input
                 type="text"
                 className="tipo-otro-input"
@@ -4346,11 +4344,6 @@ export default function App() {
         }
         .tipo-otro-editor-chips {
           margin-bottom: 10px;
-        }
-        .tipo-otro-label {
-          font-size: 13px;
-          font-weight: 800;
-          white-space: nowrap;
         }
         .tipo-otro-input {
           flex: 1;
