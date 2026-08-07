@@ -1753,28 +1753,14 @@ function IconoVaso({ size = 19 }) {
   );
 }
 
-// Ícono de la opción "Personalizar" (sigla propia): un lápiz dentro de un
-// recuadro, en vez del lápiz suelto de antes, para que se distinga de un
-// vistazo como un ítem EDITABLE y no como un tipo fijo más del catálogo.
+// Ícono de la opción "Personalizar" (sigla propia). Se probó envuelto en un
+// recuadro propio para distinguirlo como ítem editable, pero a tamaños
+// chicos el borde del recuadro se pisaba con el trazo del lápiz y se veía
+// como una línea suelta rara ("corchete"). Vuelve a ser el lápiz solo; la
+// distinción ya la dan el label "Personalizar"/"Editar siglas" y el color
+// turquesa propio.
 function IconoPersonalizar({ size = 19 }) {
-  const grosor = Math.max(1.3, size / 13);
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: size,
-        height: size,
-        border: `${grosor}px solid currentColor`,
-        borderRadius: size / 3.5,
-        flexShrink: 0,
-        boxSizing: "border-box",
-      }}
-    >
-      <Pencil size={size * 0.62} strokeWidth={2.4} />
-    </span>
-  );
+  return <Pencil size={size} strokeWidth={2.2} />;
 }
 
 // Catálogo de tipos de ingreso del turno. IMPORTANTE: esto es puramente
