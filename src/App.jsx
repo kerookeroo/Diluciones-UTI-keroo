@@ -1759,7 +1759,7 @@ function IconoVaso({ size = 19 }) {
 // chicos el borde del recuadro se pisaba con el trazo del lápiz y se veía
 // como una línea suelta rara ("corchete"). Vuelve a ser el lápiz solo; la
 // distinción ya la dan el label "Personalizar"/"Editar siglas" y el color
-// turquesa propio.
+// rosa propio.
 function IconoPersonalizar({ size = 19 }) {
   return <Pencil size={size} strokeWidth={2.2} />;
 }
@@ -1792,7 +1792,7 @@ function resolverDefTipo(tipoValue) {
   if (!tipoValue) return null;
   if (tipoValue.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
     const sigla = tipoValue.slice(PREFIJO_TIPO_PERSONALIZADO.length);
-    return { label: sigla, nombre: "Sigla personalizada", color: "turquesa", Icono: null };
+    return { label: sigla, nombre: "Sigla personalizada", color: "rosa", Icono: null };
   }
   return TIPOS_INGRESO_POR_ID[tipoValue] || null;
 }
@@ -2515,7 +2515,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                               })}
                               <button
                                 type="button"
-                                className={`tipo-dropdown-item tipo-color-turquesa ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
+                                className={`tipo-dropdown-item tipo-color-rosa ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
                                 onClick={() => {
                                   setTextoOtroFila(it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? it.tipo.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "");
                                   abrirEditorOtroFila();
@@ -2650,7 +2650,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
               })}
               <button
                 type="button"
-                className={`tipo-chip tipo-color-turquesa ${tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "active" : ""}`}
+                className={`tipo-chip tipo-color-rosa ${tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "active" : ""}`}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   if (tipoParcial?.startsWith(PREFIJO_TIPO_PERSONALIZADO)) {
@@ -4224,7 +4224,7 @@ export default function App() {
         .tipo-color-verde { color: var(--accent-green); }
         .tipo-color-naranja { color: var(--accent-orange); }
         .tipo-color-rojo { color: var(--accent-red); }
-        .tipo-color-turquesa { color: #0EA5A8; }
+        .tipo-color-rosa { color: #FF2D55; }
         /* Igual que con .balance-tabla-col-paso: una clase sola pierde contra
            ".balance-tabla-fila > div" (que fija color: var(--text-primary)) y
            el color del tipo no se vería. Se repiten en forma compuesta. */
@@ -4233,7 +4233,7 @@ export default function App() {
         .balance-tabla-fila > div.tipo-color-verde { color: var(--accent-green); }
         .balance-tabla-fila > div.tipo-color-naranja { color: var(--accent-orange); }
         .balance-tabla-fila > div.tipo-color-rojo { color: var(--accent-red); }
-        .balance-tabla-fila > div.tipo-color-turquesa { color: #0EA5A8; }
+        .balance-tabla-fila > div.tipo-color-rosa { color: #FF2D55; }
         /* Chips de selección de tipo en el formulario de carga: una sola
            fila continua dentro de un contenedor con línea divisoria entre
            ítems (no tarjetas individuales), igual que el diseño de
@@ -4379,7 +4379,7 @@ export default function App() {
         .tipo-dropdown-item:active { background: var(--bg-panel-alt); }
         /* El fondo del ítem activo usa el color propio del tipo
            (currentColor, ya fijado por .tipo-color-*) en vez de un verde
-           fijo — con un tipo no verde (ej. "Personalizar" en turquesa) un
+           fijo — con un tipo no verde (ej. "Personalizar" en rosa) un
            fondo verde detrás quedaba inconsistente. Antes tenía además un
            border-left para reforzar la marca, pero un borde recto sobre un
            botón con esquinas redondeadas no sigue la curva: sobresalía en
