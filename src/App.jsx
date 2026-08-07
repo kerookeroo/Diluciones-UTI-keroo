@@ -1962,6 +1962,23 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
   // vuelve a mostrar los chips.
   const [chipsModoOtro, setChipsModoOtro] = useState(false);
   const [textoOtroChip, setTextoOtroChip] = useState("");
+  const campoOtroChipRef = useRef(null);
+  // El autoFocus nativo del input, apenas aparece el editor, dispara el
+  // auto-scroll propio de iOS para "revelar" el campo enfocado — pero en
+  // esta pantalla (con el escalado de viewport propio de la app) ese
+  // scroll automático se pasaba de largo, dejando el campo tapado arriba
+  // del todo mientras el teclado ocupaba la mitad de abajo. En vez de
+  // confiar en ese cálculo nativo, se enfoca sin autoFocus y se hace un
+  // scrollIntoView propio a destino conocido (centrado en pantalla) apenas
+  // el editor se monta.
+  useEffect(() => {
+    if (!chipsModoOtro) return;
+    const id = setTimeout(() => {
+      campoOtroChipRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      campoOtroChipRef.current?.focus();
+    }, 50);
+    return () => clearTimeout(id);
+  }, [chipsModoOtro]);
   const idParcialRef = useRef(mayorIdGuardado(leerListaGuardada(K_INGRESOS_PARCIAL), leerListaGuardada(K_EGRESOS_PARCIAL)) + 1);
   const campoTotalRef = useRef(null);
   const campoPasoRef = useRef(null);
@@ -2137,10 +2154,22 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
   // cada vez que se abre/cierra el desplegable de una fila distinta.
   const [dropdownModoOtro, setDropdownModoOtro] = useState(false);
   const [textoOtroFila, setTextoOtroFila] = useState("");
+  const campoOtroFilaRef = useRef(null);
   useEffect(() => {
     setDropdownModoOtro(false);
     setTextoOtroFila("");
   }, [filaEligiendoTipo]);
+
+  // Mismo fix que campoOtroChipRef: scroll propio en vez del auto-scroll
+  // nativo de iOS al enfocar, que en esta pantalla se pasaba de largo.
+  useEffect(() => {
+    if (!dropdownModoOtro) return;
+    const id = setTimeout(() => {
+      campoOtroFilaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      campoOtroFilaRef.current?.focus();
+    }, 50);
+    return () => clearTimeout(id);
+  }, [dropdownModoOtro]);
 
   // Cierre al tocar fuera del dropdown. Antes esto lo hacía un overlay con
   // position:fixed, pero el transform del track de pestañas rompe el fixed
@@ -2403,12 +2432,12 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                           <div className="tipo-otro-editor">
                             <IconoPersonalizar size={16} />
                             <input
+                              ref={campoOtroFilaRef}
                               type="text"
                               className="tipo-otro-input"
                               placeholder="Hasta 3 letras"
                               value={textoOtroFila}
                               maxLength={3}
-                              autoFocus
                               enterKeyHint="done"
                               onChange={(e) => setTextoOtroFila(e.target.value.toUpperCase().slice(0, 3))}
                               onKeyDown={(e) => {
@@ -2532,12 +2561,12 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
             <div className="tipo-otro-editor tipo-otro-editor-chips">
               <IconoPersonalizar size={16} />
               <input
+                ref={campoOtroChipRef}
                 type="text"
                 className="tipo-otro-input"
                 placeholder="Hasta 3 letras"
                 value={textoOtroChip}
                 maxLength={3}
-                autoFocus
                 enterKeyHint="done"
                 onChange={(e) => setTextoOtroChip(e.target.value.toUpperCase().slice(0, 3))}
                 onKeyDown={(e) => {
