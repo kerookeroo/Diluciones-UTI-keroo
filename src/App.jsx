@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home, Scale, Trash2, Brain, Pencil, Plus, X, Check } from "lucide-react";
 
 // Escala global de la interfaz para el uso real en el teléfono (todo se veía
@@ -1963,22 +1964,22 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
   const [chipsModoOtro, setChipsModoOtro] = useState(false);
   const [textoOtroChip, setTextoOtroChip] = useState("");
   const campoOtroChipRef = useRef(null);
-  // El autoFocus nativo del input, apenas aparece el editor, dispara el
-  // auto-scroll propio de iOS para "revelar" el campo enfocado — pero en
-  // esta pantalla (con el escalado de viewport propio de la app) ese
-  // scroll automático se pasaba de largo, dejando el campo tapado arriba
-  // del todo mientras el teclado ocupaba la mitad de abajo. En vez de
-  // confiar en ese cálculo nativo, se enfoca sin autoFocus y se hace un
-  // scrollIntoView propio a destino conocido (centrado en pantalla) apenas
-  // el editor se monta.
-  useEffect(() => {
-    if (!chipsModoOtro) return;
-    const id = setTimeout(() => {
-      campoOtroChipRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-      campoOtroChipRef.current?.focus();
-    }, 50);
-    return () => clearTimeout(id);
-  }, [chipsModoOtro]);
+  // El autoFocus nativo del input disparaba el auto-scroll propio de iOS
+  // para "revelar" el campo enfocado, pero en esta pantalla (con el
+  // escalado de viewport propio de la app) ese cálculo se pasaba de largo.
+  // La solución ingenua —sacar autoFocus y enfocar en un setTimeout/
+  // useEffect después de montar— trae un problema nuevo: iOS solo abre el
+  // teclado con foco programático si el .focus() ocurre SINCRÓNICAMENTE
+  // dentro del gesto de touch/click; en un setTimeout esa cadena ya se
+  // cortó, así que el campo queda enfocado (el cursor "existe") pero sin
+  // teclado, obligando a tocar dos veces. flushSync fuerza a React a
+  // renderizar el input ANTES de que termine el mismo click, así el
+  // .focus() de acá abajo todavía cuenta como parte del gesto original.
+  const abrirEditorOtroChip = () => {
+    flushSync(() => setChipsModoOtro(true));
+    campoOtroChipRef.current?.focus();
+    campoOtroChipRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
   const idParcialRef = useRef(mayorIdGuardado(leerListaGuardada(K_INGRESOS_PARCIAL), leerListaGuardada(K_EGRESOS_PARCIAL)) + 1);
   const campoTotalRef = useRef(null);
   const campoPasoRef = useRef(null);
@@ -2160,16 +2161,14 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
     setTextoOtroFila("");
   }, [filaEligiendoTipo]);
 
-  // Mismo fix que campoOtroChipRef: scroll propio en vez del auto-scroll
-  // nativo de iOS al enfocar, que en esta pantalla se pasaba de largo.
-  useEffect(() => {
-    if (!dropdownModoOtro) return;
-    const id = setTimeout(() => {
-      campoOtroFilaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-      campoOtroFilaRef.current?.focus();
-    }, 50);
-    return () => clearTimeout(id);
-  }, [dropdownModoOtro]);
+  // Mismo fix que abrirEditorOtroChip: foco sincrónico (vía flushSync)
+  // dentro del click, para que iOS abra el teclado solo en vez de dejar el
+  // campo enfocado pero sin teclado.
+  const abrirEditorOtroFila = () => {
+    flushSync(() => setDropdownModoOtro(true));
+    campoOtroFilaRef.current?.focus();
+    campoOtroFilaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
 
   // Cierre al tocar fuera del dropdown. Antes esto lo hacía un overlay con
   // position:fixed, pero el transform del track de pestañas rompe el fixed
@@ -2474,7 +2473,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                                 className={`tipo-dropdown-item tipo-color-turquesa ${it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? "activo" : ""}`}
                                 onClick={() => {
                                   setTextoOtroFila(it.tipo?.startsWith(PREFIJO_TIPO_PERSONALIZADO) ? it.tipo.slice(PREFIJO_TIPO_PERSONALIZADO.length) : "");
-                                  setDropdownModoOtro(true);
+                                  abrirEditorOtroFila();
                                 }}
                               >
                                 <IconoPersonalizar size={20} />
@@ -2614,7 +2613,7 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
                     return;
                   }
                   setTextoOtroChip("");
-                  setChipsModoOtro(true);
+                  abrirEditorOtroChip();
                 }}
               >
                 <span className="tipo-chip-header">
