@@ -1813,21 +1813,35 @@ function normalizarSiglaPersonalizada(texto) {
 // visualViewport (se achica cuando el teclado ya está arriba). Con un
 // timeout de respaldo por si el navegador no dispara ese resize.
 function reafirmarScrollAlAbrirTeclado(elRef) {
+  const corregir = () => elRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
   if (!window.visualViewport) {
-    setTimeout(() => elRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }), 350);
+    setTimeout(corregir, 350);
     return;
   }
   const vv = window.visualViewport;
-  let hecho = false;
-  const corregir = () => {
-    if (hecho) return;
-    hecho = true;
-    elRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-    vv.removeEventListener("resize", corregir);
+  // Algunos teclados (ej. SwiftKey en Android/iOS) no animan de una sola
+  // vez: disparan varios resize en pasos mientras se despliegan. Corregimos
+  // en CADA paso (así siempre terminamos apuntando al último, ya asentado)
+  // y dejamos de escuchar recién cuando el viewport lleva un rato quieto.
+  let ultimoResize = Date.now();
+  const onResize = () => {
+    ultimoResize = Date.now();
+    corregir();
   };
-  vv.addEventListener("resize", corregir);
-  // Respaldo: si por lo que sea el teclado no dispara resize (ej. ya
-  // estaba abierto de un campo anterior), igual se corrige una vez.
+  vv.addEventListener("resize", onResize);
+  const inicio = Date.now();
+  const chequearQuietud = () => {
+    const quieto = Date.now() - ultimoResize > 250;
+    const agotado = Date.now() - inicio > 1500;
+    if (quieto || agotado) {
+      vv.removeEventListener("resize", onResize);
+      return;
+    }
+    setTimeout(chequearQuietud, 100);
+  };
+  setTimeout(chequearQuietud, 100);
+  // Respaldo: si el teclado no dispara resize en absoluto (ej. ya estaba
+  // abierto de un campo anterior), igual se corrige una vez.
   setTimeout(corregir, 400);
 }
 
