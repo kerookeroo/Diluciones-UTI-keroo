@@ -1359,10 +1359,10 @@ function Diluciones() {
           <div className="section-title">¿Qué querés calcular?</div>
           <div className="mode-tabs">
             <button className={`mode-tab ${direccion === "mlh-a-dosis" ? "active" : ""}`} onClick={() => cambiarDireccion("mlh-a-dosis")}>
-              ml/h → Dosis
+              ml/h → {unidadDosis === "gamas" ? "Gamas" : "Dosis"}
             </button>
             <button className={`mode-tab ${direccion === "dosis-a-mlh" ? "active" : ""}`} onClick={() => cambiarDireccion("dosis-a-mlh")}>
-              Dosis → ml/h
+              {unidadDosis === "gamas" ? "Gamas" : "Dosis"} → ml/h
             </button>
           </div>
 
