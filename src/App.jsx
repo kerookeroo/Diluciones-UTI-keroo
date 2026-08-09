@@ -798,6 +798,10 @@ function Diluciones() {
   const [unidadDosis, setUnidadDosis] = useState("gamas");
 
   const necesitaPeso = UNIDADES_QUE_REQUIEREN_PESO.includes(unidadDosis);
+  // Drogas donde "gamas" es la ÚNICA unidad posible (no hay nada real para
+  // elegir en el selector de unidad, a diferencia de ej. Fenilefrina que
+  // admite mcg/min o gamas).
+  const soloGamas = (UNIDADES_POR_DROGA[droga]?.length === 1) && UNIDADES_POR_DROGA[droga][0] === "gamas";
   const unidadPrep = DOSIS_REFERENCIA[droga]?.unidadPreparacion || "mg";
   const esUI = unidadPrep === "UI";
   const unidadRefDroga = DOSIS_REFERENCIA[droga]?.unidadRef;
@@ -1366,35 +1370,55 @@ function Diluciones() {
             </button>
           </div>
 
-          <div className="panel-row two-col">
-            {direccion === "dosis-a-mlh" ? (
-              <Field label="Dosis requerida" unit={unidadDosis === "gamas" ? "gamas" : unidadDosis} value={dosisPrescrita} onChange={setDosisPrescrita} placeholder="ej: 0.1" />
-            ) : (
-              <Field label="Velocidad actual" unit="ml/h" value={mlhCargado} onChange={setMlhCargado} placeholder="ej: 12" />
-            )}
-
-            <label className="field">
-              <span className="field-label">
-                {direccion === "dosis-a-mlh" ? "Unidad de dosis requerida" : "Unidad del resultado"}
-              </span>
-              <div className="select-wrap">
-                <select className="field-select" value={unidadDosis} onChange={(e) => setUnidadDosis(e.target.value)}>
-                  {(esUI
-                    ? UNIDADES_POR_DROGA[droga] || ["UI/h", "UI/kg/h"]
-                    : UNIDADES_POR_DROGA[droga] || ["mg/h", "gamas", "mcg/min"]
-                  ).map((u) => (
-                    <option key={u} value={u}>{ETIQUETA_UNIDAD[u] || u}</option>
-                  ))}
-                </select>
-                <ChevronDown size={16} className="select-chevron" />
-              </div>
-            </label>
-          </div>
-
-          {necesitaPeso && (
-            <div className="panel-row">
+          {/* Drogas cuya única unidad posible es "gamas" (Noradrenalina,
+              Adrenalina, Dobutamina, Dopamina, Nitroprusiato, Remifentanilo):
+              el selector de unidad no tiene sentido si no hay nada para
+              elegir, así que se oculta y el peso pasa a compartir la fila
+              con velocidad/dosis (3 campos -> 2). Drogas con más de una
+              unidad posible (ej. Fenilefrina: mcg/min o gamas) conservan el
+              selector, porque ahí sí hay una elección real que hacer. */}
+          {soloGamas ? (
+            <div className="panel-row two-col">
+              {direccion === "dosis-a-mlh" ? (
+                <Field label="Dosis requerida" unit="gamas" value={dosisPrescrita} onChange={setDosisPrescrita} placeholder="ej: 0.1" />
+              ) : (
+                <Field label="Velocidad de BIC" unit="ml/h" value={mlhCargado} onChange={setMlhCargado} placeholder="ej: 12" />
+              )}
               <Field label="Peso del paciente" unit="kg" value={pesoKg} onChange={setPesoKg} placeholder="ej: 70" onBlur={handleBlurPeso} />
             </div>
+          ) : (
+            <>
+              <div className="panel-row two-col">
+                {direccion === "dosis-a-mlh" ? (
+                  <Field label="Dosis requerida" unit={unidadDosis === "gamas" ? "gamas" : unidadDosis} value={dosisPrescrita} onChange={setDosisPrescrita} placeholder="ej: 0.1" />
+                ) : (
+                  <Field label="Velocidad de BIC" unit="ml/h" value={mlhCargado} onChange={setMlhCargado} placeholder="ej: 12" />
+                )}
+
+                <label className="field">
+                  <span className="field-label">
+                    {direccion === "dosis-a-mlh" ? "Unidad de dosis requerida" : "Unidad del resultado"}
+                  </span>
+                  <div className="select-wrap">
+                    <select className="field-select" value={unidadDosis} onChange={(e) => setUnidadDosis(e.target.value)}>
+                      {(esUI
+                        ? UNIDADES_POR_DROGA[droga] || ["UI/h", "UI/kg/h"]
+                        : UNIDADES_POR_DROGA[droga] || ["mg/h", "gamas", "mcg/min"]
+                      ).map((u) => (
+                        <option key={u} value={u}>{ETIQUETA_UNIDAD[u] || u}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={16} className="select-chevron" />
+                  </div>
+                </label>
+              </div>
+
+              {necesitaPeso && (
+                <div className="panel-row">
+                  <Field label="Peso del paciente" unit="kg" value={pesoKg} onChange={setPesoKg} placeholder="ej: 70" onBlur={handleBlurPeso} />
+                </div>
+              )}
+            </>
           )}
 
           <div className="result-block" ref={resultadoRef}>
