@@ -2482,7 +2482,14 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
 
   return (
     <div className="panel">
-      {cabecera}
+      <div className="balance-cabecera-wrap">
+        {cabecera}
+        {hayDatosParaExportar && (
+          <button type="button" className="balance-exportar-cabecera" onClick={exportarTurno} aria-label="Exportar turno">
+            <Share size={16} />
+          </button>
+        )}
+      </div>
       <div className="balance-toggle-row">
         <div className="mode-tabs">
           <button className={`mode-tab ${vista === "parcial" ? "active" : ""}`} onClick={() => setVista("parcial")}>
@@ -2492,11 +2499,6 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
             Balance Total de 24hs
           </button>
         </div>
-        {hayDatosParaExportar && (
-          <button type="button" className="balance-exportar-inline" onClick={exportarTurno} aria-label="Exportar turno">
-            <Share size={16} />
-          </button>
-        )}
         {vista === "total" && (ingresos.length > 0 || egresos.length > 0) && (
           <button type="button" className="balance-reiniciar-inline" onClick={reiniciar} aria-label="Reiniciar">
             <RotateCcw size={16} />
@@ -4838,12 +4840,27 @@ export default function App() {
           cursor: pointer;
           touch-action: manipulation;
         }
-        /* Mismo look que .balance-reiniciar-inline, pero con margin-left:auto
-           propio: al ir primero en el DOM, es quien empuja el grupo entero
-           (exportar + reiniciar) hacia el borde derecho de la fila, sin
-           tocar la regla de reiniciar de arriba. */
-        .balance-exportar-inline {
-          margin-left: auto;
+        /* El botón de exportar iba antes en .balance-toggle-row, pero ahí
+           amontonaba 2 pestañas + 2 círculos en una sola fila angosta y
+           cortaba el texto de "Balance Parcial" (quedaba "lance Parcial").
+           Ahora cuelga, fijo por posición absoluta, de la fila de pacientes
+           (.paciente-tabs) — pegado al margen derecho del panel, justo
+           arriba de "Reiniciar" (que sigue en .balance-toggle-row, sin
+           tocar esa fila). .balance-cabecera-wrap es el único elemento
+           nuevo que envuelve a "cabecera" para darle un position:relative
+           propio, sin tocar el .panel compartido por el resto de las
+           calculadoras. */
+        .balance-cabecera-wrap {
+          position: relative;
+        }
+        .paciente-tabs {
+          padding-right: 44px;
+        }
+        .balance-exportar-cabecera {
+          position: absolute;
+          top: 50%;
+          right: 0;
+          transform: translateY(-50%);
           flex-shrink: 0;
           display: flex;
           align-items: center;
