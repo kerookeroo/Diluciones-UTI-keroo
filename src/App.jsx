@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { flushSync } from "react-dom";
-import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home, Scale, Trash2, Brain, Pencil, Plus, X, Check } from "lucide-react";
+import { Droplet, Activity, ChevronDown, AlertCircle, AlertTriangle, RotateCcw, Wind, Home, Scale, Trash2, Brain, Pencil, Plus, X, Check, Share } from "lucide-react";
 
 // Escala global de la interfaz para el uso real en el teléfono (todo se veía
 // muy chico en el PWA instalado). Subí o bajá este número para agrandar o
@@ -1826,6 +1826,92 @@ function normalizarSiglaPersonalizada(texto) {
   return limpio ? PREFIJO_TIPO_PERSONALIZADO + limpio : null;
 }
 
+// Formato fijo DD/MM/AAAA, HH:MM (24hs) para "Exportar turno": a mano en vez
+// de toLocaleString, para que el resultado no dependa de la configuración
+// regional del teléfono (idioma, formato 12/24h, etc.) y sea siempre igual.
+function formatearFechaHora(fecha) {
+  const dd = String(fecha.getDate()).padStart(2, "0");
+  const mm = String(fecha.getMonth() + 1).padStart(2, "0");
+  const aaaa = fecha.getFullYear();
+  const hh = String(fecha.getHours()).padStart(2, "0");
+  const min = String(fecha.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${aaaa}, ${hh}:${min}`;
+}
+
+// Arma el texto plano de "Exportar turno": mismos estados y mismo fmtDosis
+// que ya usa la pantalla de Balance, sin ids ni ningún dato interno de
+// localStorage. Balance Total ya refleja correctamente lo transferido desde
+// Parcial (enviarPasoATotal/enviarEgresoATotal escriben ahí mismo como una
+// entrada más), así que alcanza con leer ingresos/egresos tal cual están.
+function construirTextoTurno({
+  labelPaciente,
+  ingresos,
+  egresos,
+  ingresosParcial,
+  egresosParcial,
+  totalIngresos,
+  totalEgresos,
+  balance,
+  totalPasoParcial,
+  totalEgresosParcial,
+  balanceParcial,
+}) {
+  const fechaHora = formatearFechaHora(new Date());
+
+  const lineasIngresosParcial = ingresosParcial.length > 0
+    ? ingresosParcial
+        .map((it) => {
+          const sigla = resolverDefTipo(it.tipo)?.label || "?";
+          const paso = it.paso != null ? `${fmtDosis(it.paso, 2)} ml` : "—";
+          const quedo = it.quedo != null ? `${fmtDosis(it.quedo, 2)} ml` : "—";
+          return `  ${sigla} — Vol. Total ${fmtDosis(it.total, 2)} ml · Pasó ${paso} · Quedó ${quedo}`;
+        })
+        .join("\n")
+    : "  Sin ingresos cargados.";
+
+  const lineasEgresosParcial = egresosParcial.length > 0
+    ? egresosParcial.map((it) => `  ${fmtDosis(it.valor, 2)} ml`).join("\n")
+    : "  Sin egresos cargados.";
+
+  const lineasIngresosTotal = ingresos.length > 0
+    ? ingresos.map((it) => `  ${fmtDosis(it.valor, 2)} ml`).join("\n")
+    : "  Sin ingresos cargados.";
+
+  const lineasEgresosTotal = egresos.length > 0
+    ? egresos.map((it) => `  ${fmtDosis(it.valor, 2)} ml`).join("\n")
+    : "  Sin egresos cargados.";
+
+  return `UTI Herramientas — Balance de turno
+${labelPaciente}
+${fechaHora}
+
+BALANCE PARCIAL
+Ingresos del turno:
+${lineasIngresosParcial}
+Total Ingresos: ${fmtDosis(totalPasoParcial, 2)} ml
+
+Egresos del turno:
+${lineasEgresosParcial}
+Total Egresos: ${fmtDosis(totalEgresosParcial, 2)} ml
+
+Balance parcial: ${balanceParcial > 0 ? "+" : ""}${fmtDosis(balanceParcial, 2)} ml
+
+BALANCE TOTAL (24 h)
+Ingresos:
+${lineasIngresosTotal}
+Subtotal ingresos: ${fmtDosis(totalIngresos, 2)} ml
+
+Egresos:
+${lineasEgresosTotal}
+Subtotal egresos: ${fmtDosis(totalEgresos, 2)} ml
+
+Balance total 24h: ${balance > 0 ? "+" : ""}${fmtDosis(balance, 2)} ml
+
+—
+Generado por UTI Herramientas el ${fechaHora}.
+No reemplaza el registro formal de enfermería.`;
+}
+
 // El scrollIntoView llamado apenas se enfoca el campo (necesario para que
 // iOS abra el teclado, ver abrirEditorOtroChip/Fila) queda obsoleto: el
 // teclado recién termina de animar SEGUNDOS después, y en ese momento el
@@ -2340,6 +2426,60 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
     setUltimoEgresoEnviado(totalEgresosParcial);
   };
 
+  // "Exportar turno": arma el texto con construirTextoTurno y lo saca del
+  // dispositivo sin backend. Camino principal: hoja nativa de compartir de
+  // iOS (navigator.share). Si no existe, o si share() falla por un motivo
+  // que no sea "el usuario canceló", cae a copiar al portapapeles. El aviso
+  // inline solo aparece en ese camino de respaldo (copiado u error) —
+  // compartir con éxito ya tiene su propia confirmación nativa, y cancelar
+  // la hoja de compartir es una acción válida que no amerita ningún aviso.
+  const [avisoExportar, setAvisoExportar] = useState("");
+  const avisoExportarTimeoutRef = useRef(null);
+
+  const mostrarAvisoExportar = (texto) => {
+    setAvisoExportar(texto);
+    if (avisoExportarTimeoutRef.current) clearTimeout(avisoExportarTimeoutRef.current);
+    avisoExportarTimeoutRef.current = setTimeout(() => setAvisoExportar(""), 2500);
+  };
+
+  const exportarTurno = async () => {
+    const texto = construirTextoTurno({
+      labelPaciente,
+      ingresos,
+      egresos,
+      ingresosParcial,
+      egresosParcial,
+      totalIngresos,
+      totalEgresos,
+      balance,
+      totalPasoParcial,
+      totalEgresosParcial,
+      balanceParcial,
+    });
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: texto });
+        return;
+      }
+      throw new Error("navigator.share no disponible");
+    } catch (e) {
+      if (e?.name === "AbortError") return; // el usuario canceló la hoja de compartir: nada que avisar
+      if (!navigator.clipboard?.writeText) {
+        mostrarAvisoExportar("No se pudo exportar: el dispositivo no permite compartir ni copiar.");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(texto);
+        mostrarAvisoExportar("Turno copiado al portapapeles");
+      } catch {
+        mostrarAvisoExportar("No se pudo exportar: el dispositivo no permite compartir ni copiar.");
+      }
+    }
+  };
+
+  const hayDatosParaExportar = ingresos.length > 0 || egresos.length > 0 || ingresosParcial.length > 0 || egresosParcial.length > 0;
+
   return (
     <div className="panel">
       {cabecera}
@@ -2352,6 +2492,11 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
             Balance Total de 24hs
           </button>
         </div>
+        {hayDatosParaExportar && (
+          <button type="button" className="balance-exportar-inline" onClick={exportarTurno} aria-label="Exportar turno">
+            <Share size={16} />
+          </button>
+        )}
         {vista === "total" && (ingresos.length > 0 || egresos.length > 0) && (
           <button type="button" className="balance-reiniciar-inline" onClick={reiniciar} aria-label="Reiniciar">
             <RotateCcw size={16} />
@@ -2363,6 +2508,11 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
           </button>
         )}
       </div>
+      {avisoExportar && (
+        <div className="balance-aviso-exportar">
+          <AlertCircle size={14} /> {avisoExportar}
+        </div>
+      )}
 
       {vista === "total" && (
         <>
@@ -4687,6 +4837,36 @@ export default function App() {
           padding: 0;
           cursor: pointer;
           touch-action: manipulation;
+        }
+        /* Mismo look que .balance-reiniciar-inline, pero con margin-left:auto
+           propio: al ir primero en el DOM, es quien empuja el grupo entero
+           (exportar + reiniciar) hacia el borde derecho de la fila, sin
+           tocar la regla de reiniciar de arriba. */
+        .balance-exportar-inline {
+          margin-left: auto;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          background: var(--bg-panel);
+          border: 1px solid var(--border-panel);
+          color: var(--accent-blue);
+          border-radius: 50%;
+          padding: 0;
+          cursor: pointer;
+          touch-action: manipulation;
+        }
+        .balance-aviso-exportar {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 6px;
+          font-size: 12.5px;
+          font-weight: 600;
+          color: var(--text-secondary);
+          margin: -10px 0 14px;
         }
         .info-note {
           background: var(--box-green-bg);
