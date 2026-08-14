@@ -419,7 +419,7 @@ const FACTOR_GOTERO = {
   micro: 60, // gotas/ml microgotero
 };
 
-function num(v) {
+export function num(v) {
   const n = parseFloat(String(v).replace(",", "."));
   return Number.isFinite(n) ? n : null;
 }
@@ -1537,14 +1537,14 @@ function Diluciones() {
   );
 }
 
-function fmt(n) {
+export function fmt(n) {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
 
 // Formato para Diluciones: usa coma decimal (convención Argentina) y evita
 // mostrar decimales innecesarios en números que son enteros (ej. toFixed(3)
 // sobre 5 da "5.000", que a simple vista se lee como "cinco mil").
-function fmtDosis(n, maxDecimales = 3) {
+export function fmtDosis(n, maxDecimales = 3) {
   if (Number.isInteger(n)) return String(n);
   return n.toFixed(maxDecimales).replace(/0+$/, "").replace(/\.$/, "").replace(".", ",");
 }
@@ -2014,6 +2014,11 @@ function mayorIdGuardado(...listas) {
   return mayor;
 }
 
+// Suma con acumulador redondeado a 2 decimales en cada paso para evitar
+// que errores de redondeo flotante de JS (ej. 0.1 + 0.2) se acumulen a lo
+// largo de una lista larga de valores durante un turno de 12h.
+export const sumar = (lista, campo) => lista.reduce((acc, it) => Math.round((acc + (it[campo] ?? 0)) * 100) / 100, 0);
+
 // Calculadora de Balance de Ingresos y Egresos. A pedido explícito: sin
 // etiquetas ni categorías, solo el número y a qué columna va (Ingreso o
 // Egreso) — la idea es cargar rápido durante el turno, no documentar qué
@@ -2081,11 +2086,6 @@ function BalancePaciente({ activo, sufijo, labelPaciente, cabecera }) {
     setIngresos([]);
     setEgresos([]);
   };
-
-  // Suma con acumulador redondeado a 2 decimales en cada paso para evitar
-  // que errores de redondeo flotante de JS (ej. 0.1 + 0.2) se acumulen a lo
-  // largo de una lista larga de valores durante un turno de 12h.
-  const sumar = (lista, campo) => lista.reduce((acc, it) => Math.round((acc + (it[campo] ?? 0)) * 100) / 100, 0);
 
   const totalIngresos = useMemo(() => sumar(ingresos, "valor"), [ingresos]);
   const totalEgresos = useMemo(() => sumar(egresos, "valor"), [egresos]);
