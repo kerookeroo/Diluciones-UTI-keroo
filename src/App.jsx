@@ -547,55 +547,56 @@ function Inicio({ tema, toggleTheme, setTab }) {
   );
 }
 
+// FiO2 se ingresa en % (ej. 40) y se convierte a decimal (0.4) para la
+// fórmula clásica PaFi = PaO2 / FiO2(decimal).
+//
+// Guardia fisiológica: FiO2 nunca puede ser menor a 21% (aire ambiente) ni
+// mayor a 100% (oxígeno puro). El error típico es tipear el decimal ("0.4")
+// en vez del porcentaje ("40"): antes eso se calculaba igual y daba un PaFi
+// absurdo (ej. 20.000) con cartel "sin criterio de SDRA" — una
+// interpretación clínica falsa mostrada con total confianza. Ahora, en vez
+// de calcular con un valor imposible, se corta y se avisa. La Definición de
+// Berlín (JAMA 2012) asume FiO2 entre 0,21 y 1,0.
+export function calcularPaFi(pao2, fio2Pct) {
+  const pao2Val = num(pao2);
+  const fio2PctVal = num(fio2Pct);
+  if (!pao2Val || pao2Val <= 0 || !fio2PctVal || fio2PctVal <= 0) return null;
+  if (fio2PctVal < 21) {
+    return {
+      error: "La FiO₂ mínima es 21% (aire ambiente). Si tu valor es decimal (ej. 0,4), ingresalo como porcentaje (40).",
+    };
+  }
+  if (fio2PctVal > 100) {
+    return {
+      error: "La FiO₂ máxima es 100% (oxígeno puro). Verificá el valor ingresado.",
+    };
+  }
+  const fio2Decimal = fio2PctVal / 100;
+  const pafi = pao2Val / fio2Decimal;
+
+  let categoria, colorClass;
+  if (pafi > 300) {
+    categoria = "Sin criterio de SDRA (oxigenación normal o casi normal)";
+    colorClass = "pafi-normal";
+  } else if (pafi > 200) {
+    categoria = "SDRA leve";
+    colorClass = "pafi-leve";
+  } else if (pafi > 100) {
+    categoria = "SDRA moderado";
+    colorClass = "pafi-moderado";
+  } else {
+    categoria = "SDRA severo";
+    colorClass = "pafi-severo";
+  }
+
+  return { valor: pafi, categoria, colorClass };
+}
+
 function PaFi() {
   const [pao2, setPao2] = useState("");
   const [fio2Pct, setFio2Pct] = useState("");
 
-  const resultado = useMemo(() => {
-    const pao2Val = num(pao2);
-    const fio2PctVal = num(fio2Pct);
-    if (!pao2Val || pao2Val <= 0 || !fio2PctVal || fio2PctVal <= 0) return null;
-    // FiO2 se ingresa en % (ej. 40) y se convierte a decimal (0.4) para
-    // la fórmula clásica PaFi = PaO2 / FiO2(decimal).
-    //
-    // Guardia fisiológica: FiO2 nunca puede ser menor a 21% (aire
-    // ambiente) ni mayor a 100% (oxígeno puro). El error típico es tipear
-    // el decimal ("0.4") en vez del porcentaje ("40"): antes eso se
-    // calculaba igual y daba un PaFi absurdo (ej. 20.000) con cartel
-    // "sin criterio de SDRA" — una interpretación clínica falsa mostrada
-    // con total confianza. Ahora, en vez de calcular con un valor
-    // imposible, se corta y se avisa. La Definición de Berlín (JAMA 2012)
-    // asume FiO2 entre 0,21 y 1,0.
-    if (fio2PctVal < 21) {
-      return {
-        error: "La FiO₂ mínima es 21% (aire ambiente). Si tu valor es decimal (ej. 0,4), ingresalo como porcentaje (40).",
-      };
-    }
-    if (fio2PctVal > 100) {
-      return {
-        error: "La FiO₂ máxima es 100% (oxígeno puro). Verificá el valor ingresado.",
-      };
-    }
-    const fio2Decimal = fio2PctVal / 100;
-    const pafi = pao2Val / fio2Decimal;
-
-    let categoria, colorClass;
-    if (pafi > 300) {
-      categoria = "Sin criterio de SDRA (oxigenación normal o casi normal)";
-      colorClass = "pafi-normal";
-    } else if (pafi > 200) {
-      categoria = "SDRA leve";
-      colorClass = "pafi-leve";
-    } else if (pafi > 100) {
-      categoria = "SDRA moderado";
-      colorClass = "pafi-moderado";
-    } else {
-      categoria = "SDRA severo";
-      colorClass = "pafi-severo";
-    }
-
-    return { valor: pafi, categoria, colorClass };
-  }, [pao2, fio2Pct]);
+  const resultado = useMemo(() => calcularPaFi(pao2, fio2Pct), [pao2, fio2Pct]);
 
   return (
     <div className="panel">

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { num, fmt, fmtDosis, sumar } from "./App.jsx";
+import { num, fmt, fmtDosis, sumar, calcularPaFi } from "./App.jsx";
 
 // Estos tests documentan el comportamiento ACTUAL de num/fmt/fmtDosis/sumar
 // tal cual está implementado en App.jsx, incluyendo casos que puedan parecer
@@ -188,5 +188,127 @@ describe("sumar", () => {
 
   it("valores negativos se restan correctamente", () => {
     expect(sumar([{ valor: 10 }, { valor: -3 }], "valor")).toBe(7);
+  });
+});
+
+describe("calcularPaFi", () => {
+  // --- Casos normales ---
+  it("caso normal: PaO2=80, FiO2=40 -> PaFi=200, moderado", () => {
+    expect(calcularPaFi("80", "40")).toEqual({
+      valor: 200,
+      categoria: "SDRA moderado",
+      colorClass: "pafi-moderado",
+    });
+  });
+
+  it("caso normal: PaO2=95, FiO2=21 -> sin criterio de SDRA", () => {
+    expect(calcularPaFi("95", "21")).toEqual({
+      valor: 95 / 0.21,
+      categoria: "Sin criterio de SDRA (oxigenación normal o casi normal)",
+      colorClass: "pafi-normal",
+    });
+  });
+
+  it("caso normal: PaO2=60, FiO2=60 -> PaFi=100, severo", () => {
+    expect(calcularPaFi("60", "60")).toEqual({
+      valor: 100,
+      categoria: "SDRA severo",
+      colorClass: "pafi-severo",
+    });
+  });
+
+  // --- Bordes de categoría: 300, 200, 100 ---
+  it("borde: PaFi=300 exacto -> leve (no 'normal', el corte es estricto por >)", () => {
+    expect(calcularPaFi("300", "100")).toEqual({
+      valor: 300,
+      categoria: "SDRA leve",
+      colorClass: "pafi-leve",
+    });
+  });
+
+  it("borde: PaFi=200 exacto -> moderado", () => {
+    expect(calcularPaFi("200", "100")).toEqual({
+      valor: 200,
+      categoria: "SDRA moderado",
+      colorClass: "pafi-moderado",
+    });
+  });
+
+  it("borde: PaFi=100 exacto -> severo", () => {
+    expect(calcularPaFi("100", "100")).toEqual({
+      valor: 100,
+      categoria: "SDRA severo",
+      colorClass: "pafi-severo",
+    });
+  });
+
+  it("borde: PaFi=301 (justo por encima de 300) -> sin criterio de SDRA", () => {
+    expect(calcularPaFi("301", "100")).toEqual({
+      valor: 301,
+      categoria: "Sin criterio de SDRA (oxigenación normal o casi normal)",
+      colorClass: "pafi-normal",
+    });
+  });
+
+  // --- Bordes de FiO2: 21, 100, 20.99, 100.01 ---
+  it("borde: FiO2=21 exacto -> sin error, calcula normalmente", () => {
+    expect(calcularPaFi("50", "21")).toEqual({
+      valor: 50 / 0.21,
+      categoria: "SDRA leve",
+      colorClass: "pafi-leve",
+    });
+  });
+
+  it("borde: FiO2=20,99 (justo debajo de 21) -> error de FiO2 mínima", () => {
+    expect(calcularPaFi("50", "20.99")).toEqual({
+      error: "La FiO₂ mínima es 21% (aire ambiente). Si tu valor es decimal (ej. 0,4), ingresalo como porcentaje (40).",
+    });
+  });
+
+  it("borde: FiO2=100 exacto -> sin error, calcula normalmente", () => {
+    expect(calcularPaFi("50", "100")).toEqual({
+      valor: 50,
+      categoria: "SDRA severo",
+      colorClass: "pafi-severo",
+    });
+  });
+
+  it("borde: FiO2=100,01 (justo encima de 100) -> error de FiO2 máxima", () => {
+    expect(calcularPaFi("50", "100.01")).toEqual({
+      error: "La FiO₂ máxima es 100% (oxígeno puro). Verificá el valor ingresado.",
+    });
+  });
+
+  // --- Inválidos / vacíos ---
+  it("PaO2 vacío -> null", () => {
+    expect(calcularPaFi("", "40")).toBeNull();
+  });
+
+  it("FiO2 vacío -> null", () => {
+    expect(calcularPaFi("80", "")).toBeNull();
+  });
+
+  it("ambos vacíos -> null", () => {
+    expect(calcularPaFi("", "")).toBeNull();
+  });
+
+  it('PaO2 no numérico ("abc") -> null', () => {
+    expect(calcularPaFi("abc", "40")).toBeNull();
+  });
+
+  it('PaO2="0" -> null', () => {
+    expect(calcularPaFi("0", "40")).toBeNull();
+  });
+
+  it('FiO2="0" -> null', () => {
+    expect(calcularPaFi("80", "0")).toBeNull();
+  });
+
+  it("PaO2 negativo -> null, sin ningún mensaje de error", () => {
+    expect(calcularPaFi("-10", "40")).toBeNull();
+  });
+
+  it("FiO2 negativo -> null, NO dispara el error de 'FiO2 mínima 21%' (se corta antes)", () => {
+    expect(calcularPaFi("80", "-5")).toBeNull();
   });
 });
