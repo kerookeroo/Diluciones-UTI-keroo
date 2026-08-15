@@ -217,6 +217,40 @@ describe("fmtDosis — bug de maxDecimales=0 (tests en rojo hasta el fix)", () =
   });
 });
 
+// PASO A — reproducción del bug con entradas 100% enteras y realistas de
+// PaFi (no hace falta que el usuario tipee ningún decimal: PaO2/FiO2 son
+// enteros, pero PaO2/(FiO2/100) casi nunca da un entero exacto). Esto
+// representa exactamente lo que la pantalla mostraría hoy — combina
+// calcularPaFi (ya correcta, sin bug) con fmtDosis (con el bug) para
+// probar el pipeline completo de display, no solo fmtDosis aislada.
+// Todos estos tests están en rojo a propósito contra el código actual.
+describe("PaFi — display end-to-end (bug alcanzable con entradas enteras reales)", () => {
+  it("PaO2=84, FiO2=28% (Venturi estándar) -> PaFi=300 -> debería mostrar '300'", () => {
+    const resultado = calcularPaFi("84", "28");
+    expect(fmtDosis(resultado.valor, 0)).toBe("300");
+  });
+
+  it("PaO2=70, FiO2=28% -> PaFi=250 -> debería mostrar '250'", () => {
+    const resultado = calcularPaFi("70", "28");
+    expect(fmtDosis(resultado.valor, 0)).toBe("250");
+  });
+
+  it("PaO2=98, FiO2=28% -> PaFi=350 -> debería mostrar '350'", () => {
+    const resultado = calcularPaFi("98", "28");
+    expect(fmtDosis(resultado.valor, 0)).toBe("350");
+  });
+
+  it("PaO2=84, FiO2=35% -> PaFi=240 -> debería mostrar '240'", () => {
+    const resultado = calcularPaFi("84", "35");
+    expect(fmtDosis(resultado.valor, 0)).toBe("240");
+  });
+
+  it("PaO2=65, FiO2=21% (aire ambiente) -> PaFi≈309,52 -> debería mostrar '310'", () => {
+    const resultado = calcularPaFi("65", "21");
+    expect(fmtDosis(resultado.valor, 0)).toBe("310");
+  });
+});
+
 describe("sumar", () => {
   it("lista vacía -> 0", () => {
     expect(sumar([], "valor")).toBe(0);
