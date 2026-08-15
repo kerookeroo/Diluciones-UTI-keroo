@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { num, fmt, fmtDosis, sumar, calcularPaFi } from "./App.jsx";
+import { num, fmt, fmtDosis, sumar, calcularPaFi, calcularPPC } from "./App.jsx";
 
 // Estos tests documentan el comportamiento ACTUAL de num/fmt/fmtDosis/sumar
 // tal cual está implementado en App.jsx, incluyendo casos que puedan parecer
@@ -310,5 +310,141 @@ describe("calcularPaFi", () => {
 
   it("FiO2 negativo -> null, NO dispara el error de 'FiO2 mínima 21%' (se corta antes)", () => {
     expect(calcularPaFi("80", "-5")).toBeNull();
+  });
+});
+
+describe("calcularPPC", () => {
+  // --- Casos normales ---
+  it("caso normal: TAM=90, PIC=25 -> PPC=65, dentro del objetivo", () => {
+    expect(calcularPPC("90", "25")).toEqual({
+      valor: 65,
+      categoria: "Dentro del objetivo (Brain Trauma Foundation)",
+      colorClass: "pafi-normal",
+    });
+  });
+
+  it("caso normal: TAM=100, PIC=10 -> PPC=90, por encima del objetivo", () => {
+    expect(calcularPPC("100", "10")).toEqual({
+      valor: 90,
+      categoria: "Por encima del objetivo: riesgo de SDRA por uso de vasopresores",
+      colorClass: "pafi-leve",
+    });
+  });
+
+  it("caso normal: TAM=70, PIC=30 -> PPC=40, crítico", () => {
+    expect(calcularPPC("70", "30")).toEqual({
+      valor: 40,
+      categoria: "Crítico: riesgo de isquemia cerebral",
+      colorClass: "pafi-severo",
+    });
+  });
+
+  // --- Bordes exactos: 49,99 / 50 / 59,99 / 60 / 70 / 70,01 ---
+  it("borde: PPC=49,99 -> crítico", () => {
+    expect(calcularPPC("99.99", "50")).toEqual({
+      valor: 99.99 - 50,
+      categoria: "Crítico: riesgo de isquemia cerebral",
+      colorClass: "pafi-severo",
+    });
+  });
+
+  it("borde: PPC=50 exacto -> por debajo del objetivo (no crítico)", () => {
+    expect(calcularPPC("65", "15")).toEqual({
+      valor: 50,
+      categoria: "Por debajo del objetivo: vigilar estrechamente",
+      colorClass: "pafi-moderado",
+    });
+  });
+
+  it("borde: PPC=59,99 -> por debajo del objetivo", () => {
+    expect(calcularPPC("74.99", "15")).toEqual({
+      valor: 74.99 - 15,
+      categoria: "Por debajo del objetivo: vigilar estrechamente",
+      colorClass: "pafi-moderado",
+    });
+  });
+
+  it("borde: PPC=60 exacto -> dentro del objetivo (no 'por debajo')", () => {
+    expect(calcularPPC("75", "15")).toEqual({
+      valor: 60,
+      categoria: "Dentro del objetivo (Brain Trauma Foundation)",
+      colorClass: "pafi-normal",
+    });
+  });
+
+  it("borde: PPC=70 exacto -> dentro del objetivo (el corte <=70 es inclusive)", () => {
+    expect(calcularPPC("85", "15")).toEqual({
+      valor: 70,
+      categoria: "Dentro del objetivo (Brain Trauma Foundation)",
+      colorClass: "pafi-normal",
+    });
+  });
+
+  it("borde: PPC=70,01 -> por encima del objetivo", () => {
+    expect(calcularPPC("85.01", "15")).toEqual({
+      valor: 85.01 - 15,
+      categoria: "Por encima del objetivo: riesgo de SDRA por uso de vasopresores",
+      colorClass: "pafi-leve",
+    });
+  });
+
+  // --- PPC negativo (error) ---
+  it("PPC negativo franco: TAM=15, PIC=85 -> error, incluye 'valor' negativo", () => {
+    expect(calcularPPC("15", "85")).toEqual({
+      valor: -70,
+      error: "El resultado es negativo: verificá que no hayas invertido TAM y PIC. La TAM siempre debe ser mayor que la PIC.",
+    });
+  });
+
+  it("PPC negativo chico: TAM=49, PIC=50 -> error", () => {
+    expect(calcularPPC("49", "50")).toEqual({
+      valor: -1,
+      error: "El resultado es negativo: verificá que no hayas invertido TAM y PIC. La TAM siempre debe ser mayor que la PIC.",
+    });
+  });
+
+  it("TAM directamente negativo (-10) con PIC positiva -> mismo mensaje de 'invertiste', aunque no sea una inversión real", () => {
+    expect(calcularPPC("-10", "5")).toEqual({
+      valor: -15,
+      error: "El resultado es negativo: verificá que no hayas invertido TAM y PIC. La TAM siempre debe ser mayor que la PIC.",
+    });
+  });
+
+  // --- Comportamiento especial de 0 (a diferencia de PaFi, acá NO se excluye) ---
+  it("TAM=0 y PIC=0 -> PPC=0 -> 'Crítico', NO null (0 pasa la guarda == null)", () => {
+    expect(calcularPPC("0", "0")).toEqual({
+      valor: 0,
+      categoria: "Crítico: riesgo de isquemia cerebral",
+      colorClass: "pafi-severo",
+    });
+  });
+
+  it("TAM=50, PIC=0 -> PPC=50 -> por debajo del objetivo (PIC=0 solo tampoco bloquea)", () => {
+    expect(calcularPPC("50", "0")).toEqual({
+      valor: 50,
+      categoria: "Por debajo del objetivo: vigilar estrechamente",
+      colorClass: "pafi-moderado",
+    });
+  });
+
+  // --- Vacíos / inválidos ---
+  it("TAM vacío -> null", () => {
+    expect(calcularPPC("", "15")).toBeNull();
+  });
+
+  it("PIC vacío -> null", () => {
+    expect(calcularPPC("85", "")).toBeNull();
+  });
+
+  it("ambos vacíos -> null", () => {
+    expect(calcularPPC("", "")).toBeNull();
+  });
+
+  it('TAM no numérico ("abc") -> null', () => {
+    expect(calcularPPC("abc", "15")).toBeNull();
+  });
+
+  it('PIC no numérico ("abc") -> null', () => {
+    expect(calcularPPC("85", "abc")).toBeNull();
   });
 });

@@ -647,45 +647,47 @@ function PaFi() {
   );
 }
 
+// Guardia: una PPC negativa casi siempre significa que se cruzaron los
+// campos (la PIC tipeada en TAM y viceversa). Antes caía en la rama "< 50:
+// crítico", que es una interpretación clínica engañosa para un simple error
+// de carga. La fórmula no cambia: solo se muestra un aviso específico en vez
+// de una categoría falsa.
+export function calcularPPC(tam, pic) {
+  const tamVal = num(tam);
+  const picVal = num(pic);
+  if (tamVal == null || picVal == null) return null;
+  const ppc = tamVal - picVal;
+
+  if (ppc < 0) {
+    return {
+      valor: ppc,
+      error: "El resultado es negativo: verificá que no hayas invertido TAM y PIC. La TAM siempre debe ser mayor que la PIC.",
+    };
+  }
+
+  let categoria, colorClass;
+  if (ppc < 50) {
+    categoria = "Crítico: riesgo de isquemia cerebral";
+    colorClass = "pafi-severo";
+  } else if (ppc < 60) {
+    categoria = "Por debajo del objetivo: vigilar estrechamente";
+    colorClass = "pafi-moderado";
+  } else if (ppc <= 70) {
+    categoria = "Dentro del objetivo (Brain Trauma Foundation)";
+    colorClass = "pafi-normal";
+  } else {
+    categoria = "Por encima del objetivo: riesgo de SDRA por uso de vasopresores";
+    colorClass = "pafi-leve";
+  }
+
+  return { valor: ppc, categoria, colorClass };
+}
+
 function Ppc() {
   const [tam, setTam] = useState("");
   const [pic, setPic] = useState("");
 
-  const resultado = useMemo(() => {
-    const tamVal = num(tam);
-    const picVal = num(pic);
-    if (tamVal == null || picVal == null) return null;
-    const ppc = tamVal - picVal;
-
-    // Guardia: una PPC negativa casi siempre significa que se cruzaron
-    // los campos (la PIC tipeada en TAM y viceversa). Antes caía en la
-    // rama "< 50: crítico", que es una interpretación clínica engañosa
-    // para un simple error de carga. La fórmula no cambia: solo se
-    // muestra un aviso específico en vez de una categoría falsa.
-    if (ppc < 0) {
-      return {
-        valor: ppc,
-        error: "El resultado es negativo: verificá que no hayas invertido TAM y PIC. La TAM siempre debe ser mayor que la PIC.",
-      };
-    }
-
-    let categoria, colorClass;
-    if (ppc < 50) {
-      categoria = "Crítico: riesgo de isquemia cerebral";
-      colorClass = "pafi-severo";
-    } else if (ppc < 60) {
-      categoria = "Por debajo del objetivo: vigilar estrechamente";
-      colorClass = "pafi-moderado";
-    } else if (ppc <= 70) {
-      categoria = "Dentro del objetivo (Brain Trauma Foundation)";
-      colorClass = "pafi-normal";
-    } else {
-      categoria = "Por encima del objetivo: riesgo de SDRA por uso de vasopresores";
-      colorClass = "pafi-leve";
-    }
-
-    return { valor: ppc, categoria, colorClass };
-  }, [tam, pic]);
+  const resultado = useMemo(() => calcularPPC(tam, pic), [tam, pic]);
 
   return (
     <div className="panel">
