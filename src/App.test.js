@@ -150,6 +150,73 @@ describe("fmtDosis", () => {
   });
 });
 
+// BUG DOCUMENTADO, TODAVÍA NO CORREGIDO — estos tests están en rojo a
+// propósito. Describen el comportamiento CORRECTO que fmtDosis debería
+// tener con maxDecimales=0, para poder confirmar después que un fix lo
+// arregla sin tocar ningún otro camino (maxDecimales >= 1 sigue con sus
+// propios tests arriba, que siguen en verde).
+//
+// Causa raíz: con maxDecimales=0, toFixed(0) nunca produce un punto
+// decimal (ej. 70 -> "70", no "70."). El .replace(/0+$/, "") que existe
+// para sacar CEROS DECIMALES sobrantes (ej. "5.10" -> "5.1") no tiene
+// ningún punto que lo detenga en ese caso, así que también se come los
+// ceros que son parte del número ENTERO: "70" -> "7", "300" -> "3",
+// "1000" -> "1". Con maxDecimales >= 1 esto nunca pasa porque toFixed(N)
+// para N>=1 siempre deja un "." en el string, que el regex respeta (no
+// matchea el punto), así que la parte entera queda siempre a salvo.
+describe("fmtDosis — bug de maxDecimales=0 (tests en rojo hasta el fix)", () => {
+  it("70,01 con 0 decimales debería mostrar 70, no 7", () => {
+    expect(fmtDosis(70.01, 0)).toBe("70");
+  });
+
+  it("199,6 con 0 decimales debería mostrar 200, no 2 (justo el corte SDRA moderado/leve de PaFi)", () => {
+    expect(fmtDosis(199.6, 0)).toBe("200");
+  });
+
+  it("240,3 con 0 decimales debería mostrar 240, no 24", () => {
+    expect(fmtDosis(240.3, 0)).toBe("240");
+  });
+
+  it("100,2 con 0 decimales debería mostrar 100, no 1", () => {
+    expect(fmtDosis(100.2, 0)).toBe("100");
+  });
+
+  it("299,6 con 0 decimales debería mostrar 300, no 3 (mismo problema en un límite real de PaFi)", () => {
+    expect(fmtDosis(299.6, 0)).toBe("300");
+  });
+
+  it("1000,4 con 0 decimales debería mostrar 1000, no 1 (varios ceros seguidos, se pierden todos)", () => {
+    expect(fmtDosis(1000.4, 0)).toBe("1000");
+  });
+
+  it("0,001 con 0 decimales debería mostrar 0, no un string vacío", () => {
+    expect(fmtDosis(0.001, 0)).toBe("0");
+  });
+
+  it("-70,4 con 0 decimales debería mostrar -70, no -7 (negativos con el mismo problema)", () => {
+    expect(fmtDosis(-70.4, 0)).toBe("-70");
+  });
+
+  // --- Casos de control: deben seguir en verde antes Y después del fix ---
+  it("[control] entero exacto con 0 decimales no pasa por el camino con bug", () => {
+    expect(fmtDosis(70, 0)).toBe("70");
+  });
+
+  it("[control] 10,5 con 0 decimales ya funcionaba bien (no termina en 0)", () => {
+    expect(fmtDosis(10.5, 0)).toBe("11");
+  });
+
+  it("[control] maxDecimales=2 con un valor que redondea a un entero terminado en 0 sigue funcionando", () => {
+    // Mismo tipo de valor que rompe con maxDecimales=0, pero acá el punto
+    // decimal de toFixed(2) protege la parte entera.
+    expect(fmtDosis(100.001, 2)).toBe("100");
+  });
+
+  it("[control] maxDecimales=1 con un valor que redondea a un entero terminado en 0 sigue funcionando", () => {
+    expect(fmtDosis(240.001, 1)).toBe("240");
+  });
+});
+
 describe("sumar", () => {
   it("lista vacía -> 0", () => {
     expect(sumar([], "valor")).toBe(0);
